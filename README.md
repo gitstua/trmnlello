@@ -1,4 +1,4 @@
-# trmnlello
+# trmnlello - Trello for private boards
 
 A [TRMNL](https://usetrmnl.com) plugin that displays your Trello kanban board on your e-ink device. Shows all lists and cards including completed ones, with colour-coded labels and due dates.
 
@@ -20,7 +20,7 @@ The plugin supports all four TRMNL layout sizes (full screen, half vertical, hal
 ## Privacy & data
 
 - Read-only Trello access is requested — the plugin cannot create, edit, or delete anything in Trello
-- Your Trello credentials are stored securely and never shared with TRMNL
+- Your Trello OAuth token is stored in Cloudflare KV (hosted by the plugin operator) and is never sent to TRMNL — TRMNL only calls the `/markup` endpoint to fetch display content
 - Tokens are automatically deleted after 90 days of inactivity, or immediately when you uninstall the plugin
 
 ## Acknowledgements
@@ -29,4 +29,4 @@ Thanks to [@ucffool](https://github.com/ucffool) who independently created a pub
 
 ## Issues
 
-If something isn't working, open an issue on [GitHub](https://github.com/yourname/trmnlello).
+If something isn't working, open an issue on [GitHub](https://github.com/gitstua/trmnlello).
