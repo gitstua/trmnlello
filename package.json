@@ -1,0 +1,14 @@
+{
+  "name": "trmnlello",
+  "version": "1.0.0",
+  "description": "TRMNL plugin that displays a Trello kanban board on your e-ink device",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "kv:create": "wrangler kv namespace create TRMNLELLO"
+  },
+  "devDependencies": {
+    "wrangler": "^4.95.0"
+  }
+}

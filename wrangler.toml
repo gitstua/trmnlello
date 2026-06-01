@@ -1,0 +1,13 @@
+name = "trmnlello"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[kv_namespaces]]
+binding = "KV"
+id = "d6b4182549cb4d46801906fb9bd97721"
+
+[vars]
+# Override in .dev.vars for local dev, or set via `wrangler deploy --var`
+# BASE_URL is set automatically to the worker URL in production.
+# For local dev, wrangler sets it to http://localhost:8787 automatically.

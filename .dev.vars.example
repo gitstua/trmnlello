@@ -1,0 +1,7 @@
+# Copy to .dev.vars for local wrangler dev
+# These become env bindings — never commit .dev.vars
+
+TRELLO_API_KEY=your_trello_api_key
+TRELLO_API_SECRET=your_trello_api_secret
+TRMNL_CLIENT_ID=your_trmnl_client_id
+TRMNL_CLIENT_SECRET=your_trmnl_client_secret
