@@ -17,6 +17,17 @@ The board is shown as a kanban — one column per list, cards stacked within eac
 
 The plugin supports all four TRMNL layout sizes (full screen, half vertical, half horizontal, and quadrant).
 
+## Trello permissions
+
+When you connect Trello, you will be asked to grant **read-only** access. This allows the plugin to:
+
+- Read the names and lists on your boards
+- Read card titles, labels, and due dates
+
+It cannot create, edit, or delete anything in Trello. It cannot access your Trello account details, email address, or any boards you don't explicitly choose to display.
+
+The token is scoped to `read` access and does not expire — this avoids you needing to reconnect periodically. It is stored securely and deleted when you uninstall the plugin or after 90 days of inactivity.
+
 ## Privacy & data
 
 - Read-only Trello access is requested — the plugin cannot create, edit, or delete anything in Trello
