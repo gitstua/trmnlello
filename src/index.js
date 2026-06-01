@@ -156,6 +156,8 @@ async function handleBoardSelectGet(req, env) {
     button{width:100%;padding:12px;background:#0052cc;color:#fff;border:none;border-radius:8px;font-size:15px;cursor:pointer;font-weight:600}
     button:hover{background:#0041a3}
     .logo{font-size:28px;margin-bottom:12px}
+    .disclaimer{margin-top:20px;padding:12px;background:#f8f8f8;border-radius:8px;font-size:11px;color:#888;line-height:1.5}
+    .disclaimer a{color:#888}
   </style>
 </head>
 <body>
@@ -168,6 +170,13 @@ async function handleBoardSelectGet(req, env) {
       <select name="board_id" required>${options}</select>
       <button type="submit">Connect Board</button>
     </form>
+    <div class="disclaimer">
+      <strong>Use at your own risk.</strong> Your Trello OAuth token (read-only) will be stored in Cloudflare KV.
+      No warranty is provided. You can revoke access at any time via your
+      <a href="https://trello.com/your-account/power-ups" target="_blank">Trello account settings</a>
+      or by uninstalling this plugin.
+      By connecting your board you agree to the <a href="https://github.com/gitstua/trmnlello/blob/main/TERMS.md" target="_blank">terms of use</a>.
+    </div>
   </div>
 </body>
 </html>`);
