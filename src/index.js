@@ -30,7 +30,11 @@ function baseUrl(request, env) {
 function html(body, status = 200) {
   return new Response(body, {
     status,
-    headers: { 'Content-Type': 'text/html;charset=UTF-8' },
+    headers: {
+      'Content-Type': 'text/html;charset=UTF-8',
+      // Pages may carry a secret token in the URL; never leak it via Referer
+      'Referrer-Policy': 'no-referrer',
+    },
   });
 }
 
@@ -45,6 +49,20 @@ function esc(s) {
   return String(s ?? '')
     .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
     .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Only allow redirects back to TRMNL — guards against open-redirect via a
+// stored callback_url that didn't originate from a genuine install.
+function safeTrmnlRedirect(candidate, fallback = 'https://trmnl.com') {
+  try {
+    const u = new URL(candidate);
+    if (u.protocol === 'https:' && (u.hostname === 'trmnl.com' || u.hostname.endsWith('.trmnl.com'))) {
+      return u.toString();
+    }
+  } catch {
+    // not a valid URL — fall through
+  }
+  return fallback;
 }
 
 // ─── Install: TRMNL → /install?code=…&installation_callback_url=… ───────────
@@ -173,9 +191,9 @@ async function handleBoardSelectGet(req, env) {
     <div class="disclaimer">
       <strong>Use at your own risk.</strong> Your Trello OAuth token (read-only) will be stored in Cloudflare KV.
       No warranty is provided. You can revoke access at any time via your
-      <a href="https://trello.com/your-account/power-ups" target="_blank">Trello account settings</a>
+      <a href="https://trello.com/your-account/power-ups" target="_blank" rel="noopener noreferrer">Trello account settings</a>
       or by uninstalling this plugin.
-      By connecting your board you agree to the <a href="https://github.com/gitstua/trmnlello/blob/main/TERMS.md" target="_blank">terms of use</a>.
+      By connecting your board you agree to the <a href="https://github.com/gitstua/trmnlello/blob/main/TERMS.md" target="_blank" rel="noopener noreferrer">terms of use</a>.
     </div>
   </div>
 </body>
@@ -200,7 +218,7 @@ async function handleBoardSelectPost(req, env) {
     board_name: board.name,
   });
 
-  return Response.redirect(user.callback_url, 302);
+  return Response.redirect(safeTrmnlRedirect(user.callback_url), 302);
 }
 
 // ─── Manage: post-install board switcher linked from TRMNL dashboard ─────────
@@ -216,7 +234,8 @@ async function handleManageGet(req, env) {
   try {
     await verifyManageJwt(jwt, uuid, env.TRMNL_CLIENT_ID);
   } catch (err) {
-    return new Response(`Unauthorized: ${err.message}`, { status: 401 });
+    console.error('Manage JWT verification failed:', err.message);
+    return new Response('Unauthorized', { status: 401 });
   }
 
   const user = await kvGet(env.KV, `uuid:${uuid}`);
@@ -270,7 +289,8 @@ async function handleManagePost(req, env) {
   try {
     await verifyManageJwt(jwt, uuid, env.TRMNL_CLIENT_ID);
   } catch (err) {
-    return new Response(`Unauthorized: ${err.message}`, { status: 401 });
+    console.error('Manage JWT verification failed:', err.message);
+    return new Response('Unauthorized', { status: 401 });
   }
 
   const user = await kvGet(env.KV, `uuid:${uuid}`);
@@ -287,10 +307,10 @@ async function handleManagePost(req, env) {
   if (user.plugin_setting_id) await kvPut(env.KV, `uuid:${user.plugin_setting_id}`, updated);
 
   const redirectTo = user.plugin_setting_id
-    ? `https://trmnl.com/plugin_settings/${user.plugin_setting_id}/edit`
+    ? `https://trmnl.com/plugin_settings/${encodeURIComponent(user.plugin_setting_id)}/edit`
     : 'https://trmnl.com';
 
-  return Response.redirect(redirectTo, 302);
+  return Response.redirect(safeTrmnlRedirect(redirectTo), 302);
 }
 
 // ─── Markup: TRMNL polls this for display content ────────────────────────────
@@ -314,13 +334,17 @@ async function handleMarkup(req, env) {
 
   try {
     const lists = await trello.getBoardData(user.board_id, user.trello_token, user.trello_secret, env);
-    // Extend TTL on every use — tokens inactive for 90 days expire automatically
+    // Extend TTL on every use — tokens inactive for 90 days expire automatically.
+    // Refresh every index so the manage lookup keys don't expire out from under
+    // an otherwise-active user.
     const touched = { ...user, last_used: new Date().toISOString() };
     await kvTouch(env.KV, userKey(bearer), touched);
-    if (user.user_uuid) await kvTouch(env.KV, `uuid:${user.user_uuid}`, touched);
+    if (user.user_uuid)         await kvTouch(env.KV, `uuid:${user.user_uuid}`, touched);
+    if (user.plugin_setting_id) await kvTouch(env.KV, `uuid:${user.plugin_setting_id}`, touched);
     return json(markup.allLayouts(user.board_name, lists));
   } catch (err) {
-    const errHtml = markup.error(`Could not fetch board data: ${err.message}`);
+    console.error('Markup fetch failed:', err.message);
+    const errHtml = markup.error('Could not fetch board data. Please try again later.');
     return json({
       markup: errHtml,
       markup_half_vertical: errHtml,
@@ -376,7 +400,7 @@ export default {
       return new Response('Not found', { status: 404 });
     } catch (err) {
       console.error(err);
-      return new Response(`Internal error: ${err.message}`, { status: 500 });
+      return new Response('Internal error', { status: 500 });
     }
   },
 };

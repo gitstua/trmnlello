@@ -35,8 +35,10 @@ export async function verifyManageJwt(token, expectedUuid, clientId) {
   const header = decodePayload(headerB64);
   const payload = decodePayload(payloadB64);
 
-  // Check expiry first — fast fail before any crypto
+  // Check expiry first — fast fail before any crypto.
+  // Require exp to be present, otherwise a token with no expiry would pass.
   const now = Math.floor(Date.now() / 1000);
+  if (typeof payload.exp !== 'number') throw new Error('JWT missing exp');
   if (payload.exp < now) throw new Error('JWT expired');
 
   // sub should match the uuid param TRMNL passed in the URL

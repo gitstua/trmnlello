@@ -1,6 +1,6 @@
 # trmnlello - Trello for private boards
 
-A [TRMNL](https://usetrmnl.com) plugin that displays your Trello kanban board on your e-ink device. Shows all lists and cards including completed ones, with colour-coded labels and due dates.
+A [TRMNL](https://trmnl.com) plugin that displays your Trello kanban board on your e-ink device. Shows all lists and cards including completed ones, with colour-coded labels and due dates.
 
 ## Installing
 
