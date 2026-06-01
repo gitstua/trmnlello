@@ -56,7 +56,7 @@ function cols(columns, max, maxCards, compact) {
 
 function footer(name, full) {
   return `<div style="font-size:${full ? 11 : 9}px;${full ? 'font-weight:600;color:#333;' : 'color:#999;'}padding-top:${full ? 6 : 4}px;border-top:1px solid ${full ? '#ddd' : '#eee'};margin-top:${full ? 6 : 4}px;display:flex;align-items:center;">
-  ${full ? `<span>⬡ ${esc(clip(name, 50))}</span><span style="margin-left:auto;font-size:9px;color:#aaa;">trmnlello</span>` : `${esc(clip(name, 30))} · trmnlello`}
+  ${full ? `<span>⬡ ${esc(clip(name, 50))}</span><span style="margin-left:auto;font-size:9px;color:#aaa;">trmnlello - Trello private board</span>` : `${esc(clip(name, 30))} · trmnlello - Trello private board`}
 </div>`;
 }
 
@@ -79,11 +79,11 @@ export function quadrant(boardName, columns) {
 }
 
 export function setup() {
-  return `<div class="view view--full" style="font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;height:480px;flex-direction:column;gap:12px;"><div style="font-size:24px;">⬡</div><div style="font-size:16px;font-weight:600;">Trmnlello</div><div style="font-size:12px;color:#666;">Select a Trello board to complete setup</div></div>`;
+  return `<div class="view view--full" style="font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;height:480px;flex-direction:column;gap:12px;"><div style="font-size:24px;">⬡</div><div style="font-size:16px;font-weight:600;">Trmnlello - Trello private board</div><div style="font-size:12px;color:#666;">Select a Trello board to complete setup</div></div>`;
 }
 
 export function error(msg) {
-  return `<div class="view view--full" style="font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;height:480px;flex-direction:column;gap:8px;"><div style="font-size:14px;font-weight:600;color:#b84040;">Trmnlello Error</div><div style="font-size:11px;color:#666;max-width:400px;text-align:center;">${esc(msg)}</div></div>`;
+  return `<div class="view view--full" style="font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;height:480px;flex-direction:column;gap:8px;"><div style="font-size:14px;font-weight:600;color:#b84040;">Trmnlello - Trello private board Error</div><div style="font-size:11px;color:#666;max-width:400px;text-align:center;">${esc(msg)}</div></div>`;
 }
 
 export function allLayouts(boardName, columns) {

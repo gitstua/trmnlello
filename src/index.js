@@ -1,5 +1,6 @@
 import * as trello from './trello.js';
 import * as markup from './markup.js';
+import { verifyManageJwt } from './jwt.js';
 
 // KV key helpers
 const userKey = token => `user:${token}`;
@@ -144,7 +145,7 @@ async function handleBoardSelectGet(req, env) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Trmnlello — Select Board</title>
+  <title>Trmnlello - Trello private board — Select Board</title>
   <style>
     *{box-sizing:border-box}
     body{font-family:system-ui,sans-serif;background:#f5f5f5;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
@@ -160,7 +161,7 @@ async function handleBoardSelectGet(req, env) {
 <body>
   <div class="card">
     <div class="logo">⬡</div>
-    <h1>Trmnlello</h1>
+    <h1>Trmnlello - Trello private board</h1>
     <p>Choose which Trello board to display on your TRMNL device.</p>
     <form method="POST" action="/board-select">
       <input type="hidden" name="t" value="${esc(accessToken)}">
@@ -199,8 +200,15 @@ async function handleBoardSelectPost(req, env) {
 
 async function handleManageGet(req, env) {
   const url = new URL(req.url);
-  const uuid = url.searchParams.get('plugin_setting_uuid');
-  if (!uuid) return new Response('Missing plugin_setting_uuid', { status: 400 });
+  const uuid = url.searchParams.get('uuid') ?? url.searchParams.get('plugin_setting_uuid');
+  const jwt = url.searchParams.get('jwt');
+  if (!uuid) return new Response('Missing uuid', { status: 400 });
+
+  try {
+    await verifyManageJwt(jwt, uuid, env.TRMNL_CLIENT_ID);
+  } catch (err) {
+    return new Response(`Unauthorized: ${err.message}`, { status: 401 });
+  }
 
   const user = await kvGet(env.KV, `uuid:${uuid}`);
   if (!user?.trello_token) return new Response('User not found', { status: 404 });
@@ -215,7 +223,7 @@ async function handleManageGet(req, env) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Trmnlello — Manage</title>
+  <title>Trmnlello - Trello private board — Manage</title>
   <style>
     *{box-sizing:border-box}
     body{font-family:system-ui,sans-serif;background:#f5f5f5;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
@@ -231,10 +239,11 @@ async function handleManageGet(req, env) {
 <body>
   <div class="card">
     <div style="font-size:28px;margin-bottom:12px;">⬡</div>
-    <h1>Trmnlello</h1>
+    <h1>Trmnlello - Trello private board</h1>
     <p>Switch which Trello board appears on your device.</p>
     <form method="POST" action="/manage">
       <input type="hidden" name="uuid" value="${esc(uuid)}">
+      <input type="hidden" name="jwt" value="${esc(jwt ?? '')}">
       <select name="board_id" required>${options}</select>
       <button type="submit">Save</button>
     </form>
@@ -246,7 +255,14 @@ async function handleManageGet(req, env) {
 async function handleManagePost(req, env) {
   const body = await req.formData();
   const uuid = body.get('uuid');
+  const jwt = body.get('jwt');
   const boardId = body.get('board_id');
+
+  try {
+    await verifyManageJwt(jwt, uuid, env.TRMNL_CLIENT_ID);
+  } catch (err) {
+    return new Response(`Unauthorized: ${err.message}`, { status: 401 });
+  }
 
   const user = await kvGet(env.KV, `uuid:${uuid}`);
   if (!user?.trello_token) return new Response('User not found', { status: 404 });
@@ -258,17 +274,14 @@ async function handleManagePost(req, env) {
   const updated = { ...user, board_id: board.id, board_name: board.name };
   await kvPut(env.KV, userKey(user.access_token), updated);
   await kvPut(env.KV, `uuid:${uuid}`, updated);
+  if (user.user_uuid)         await kvPut(env.KV, `uuid:${user.user_uuid}`, updated);
+  if (user.plugin_setting_id) await kvPut(env.KV, `uuid:${user.plugin_setting_id}`, updated);
 
-  return html(`<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"><title>Saved</title>
-<style>body{font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f5f5f5}.card{background:#fff;border-radius:12px;padding:32px;max-width:420px;width:100%;box-shadow:0 4px 20px rgba(0,0,0,.08);text-align:center}</style>
-</head>
-<body><div class="card">
-  <div style="font-size:32px;margin-bottom:16px;">✓</div>
-  <div style="font-size:16px;font-weight:600;">Board updated</div>
-  <div style="font-size:13px;color:#666;margin-top:8px;">Now showing <strong>${esc(board.name)}</strong></div>
-</div></body></html>`);
+  const redirectTo = user.plugin_setting_id
+    ? `https://trmnl.com/plugin_settings/${user.plugin_setting_id}/edit`
+    : 'https://trmnl.com';
+
+  return Response.redirect(redirectTo, 302);
 }
 
 // ─── Markup: TRMNL polls this for display content ────────────────────────────
@@ -313,12 +326,17 @@ async function handleMarkup(req, env) {
 async function handleInstallSuccess(req, env) {
   const bearer = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '').trim();
   const body = await req.json().catch(() => ({}));
-  if (bearer && body.user?.uuid) {
+  if (bearer) {
     const user = await kvGet(env.KV, userKey(bearer)) ?? {};
-    const updated = { ...user, user_uuid: body.user.uuid };
+    const updated = {
+      ...user,
+      user_uuid: body.user?.uuid,
+      plugin_setting_id: body.plugin_setting_id,
+    };
     await kvPut(env.KV, userKey(bearer), updated);
-    // secondary index so /manage can look up by plugin_setting_uuid
-    await kvPut(env.KV, `uuid:${body.user.uuid}`, updated);
+    // index by both user uuid and plugin_setting_id so /manage can find the user
+    if (body.user?.uuid)         await kvPut(env.KV, `uuid:${body.user.uuid}`, updated);
+    if (body.plugin_setting_id)  await kvPut(env.KV, `uuid:${body.plugin_setting_id}`, updated);
   }
   return json({ ok: true });
 }

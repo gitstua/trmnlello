@@ -73,7 +73,7 @@ export async function getRequestToken(callbackUrl, env) {
   return parseQS(await res.text());
 }
 
-export function authorizeUrl(oauthToken, appName = 'Trmnlello') {
+export function authorizeUrl(oauthToken, appName = 'Trmnlello - Trello private board') {
   return `${AUTHORIZE_URL}?oauth_token=${oauthToken}&name=${encodeURIComponent(appName)}&scope=read&expiration=never`;
 }
 
