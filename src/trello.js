@@ -114,7 +114,7 @@ export async function getBoards(trelloToken, trelloSecret, env) {
 export async function getBoardData(boardId, trelloToken, trelloSecret, env) {
   const [lists, allCards] = await Promise.all([
     trelloGet(`/boards/${boardId}/lists?fields=id,name`, trelloToken, trelloSecret, env),
-    trelloGet(`/boards/${boardId}/cards?fields=id,name,idList,labels,due,dueComplete`, trelloToken, trelloSecret, env),
+    trelloGet(`/boards/${boardId}/cards?fields=id,name,idList,labels,due,dueComplete,badges`, trelloToken, trelloSecret, env),
   ]);
 
   const byList = {};

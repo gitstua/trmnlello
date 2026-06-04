@@ -26,11 +26,13 @@ function card(c) {
     ? new Date(c.due).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     : '';
   const overdue = c.due && !c.dueComplete && new Date(c.due) < new Date();
+  const b = c.badges ?? {};
+  const done = c.dueComplete || (b.checkItems > 0 && b.checkItems === b.checkItemsChecked);
 
   return `<div class="item">
   <div class="content">
     ${dots ? `<div style="margin-bottom:2px;">${dots}</div>` : ''}
-    <span class="title title--small lg:title--base" data-clamp="2">${esc(c.name)}</span>
+    <span class="title title--small lg:title--base" data-clamp="2"${done ? ' style="text-decoration:line-through;opacity:0.5;"' : ''}>${esc(c.name)}</span>
     ${dueStr ? `<span class="label label--small${overdue ? ' label--red' : ' label--gray'}">${dueStr}</span>` : ''}
   </div>
 </div>`;
