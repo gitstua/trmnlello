@@ -17,7 +17,7 @@ function esc(s) {
     .replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function card(c, compact) {
+function card(c) {
   const dots = (c.labels ?? []).slice(0, 3).map(l =>
     `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${LABEL_COLORS[l.color] ?? '#888'};margin-right:2px;"></span>`
   ).join('');
@@ -26,64 +26,100 @@ function card(c, compact) {
     ? new Date(c.due).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     : '';
   const overdue = c.due && !c.dueComplete && new Date(c.due) < new Date();
-  const titleLen = compact ? 28 : 40;
 
-  return `<div style="padding:3px 5px;margin-bottom:3px;background:#fff;border:1px solid #ddd;border-radius:3px;font-size:${compact ? 9 : 10}px;line-height:1.3;">
-  ${dots ? `<div style="margin-bottom:2px;">${dots}</div>` : ''}
-  <div>${esc(clip(c.name, titleLen))}</div>
-  ${dueStr ? `<div style="font-size:8px;color:${overdue ? '#b84040' : '#888'};margin-top:1px;">${dueStr}</div>` : ''}
-</div>`;
-}
-
-function column(list, cards, maxCards, compact) {
-  const done = DONE_RE.test(list.name);
-  const shown = cards.slice(0, maxCards);
-  const extra = cards.length - shown.length;
-
-  return `<div style="flex:1;min-width:0;border:1px solid #ccc;border-radius:4px;background:#f7f9fb;overflow:hidden;display:flex;flex-direction:column;">
-  <div style="background:${done ? '#e8f5e9' : '#f0f4f8'};padding:4px 6px;border-bottom:1px solid #ccc;font-size:${compact ? 9 : 10}px;font-weight:700;color:${done ? '#2e7d32' : '#2c3e50'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(clip(list.name, 18))}${cards.length ? ` <span style="font-weight:400;opacity:.7;">(${cards.length})</span>` : ''}</div>
-  <div style="padding:4px;overflow:hidden;flex:1;">
-    ${shown.map(c => card(c, compact)).join('')}
-    ${extra > 0 ? `<div style="font-size:8px;color:#888;text-align:center;margin-top:2px;">+${extra} more</div>` : ''}
-    ${cards.length === 0 ? `<div style="font-size:9px;color:#bbb;text-align:center;padding:8px 0;">empty</div>` : ''}
+  return `<div class="item">
+  <div class="content">
+    ${dots ? `<div style="margin-bottom:2px;">${dots}</div>` : ''}
+    <span class="title title--small lg:title--base" data-clamp="2">${esc(c.name)}</span>
+    ${dueStr ? `<span class="label label--small${overdue ? ' label--red' : ' label--gray'}">${dueStr}</span>` : ''}
   </div>
 </div>`;
 }
 
-function cols(columns, max, maxCards, compact) {
-  return columns.slice(0, max).map(list => column(list, list.cards, maxCards, compact)).join('');
+function column(list, cards, maxCards) {
+  const done = DONE_RE.test(list.name);
+  const shown = cards.slice(0, maxCards);
+  const extra = cards.length - shown.length;
+
+  return `<div class="column" data-overflow="true" data-overflow-counter="true">
+  <span class="label label--medium lg:label--base group-header${done ? ' label--gray' : ''}">${esc(clip(list.name, 20))}${cards.length ? ` (${cards.length})` : ''}</span>
+  ${shown.map(c => card(c)).join('')}
+  ${extra > 0 ? `<span class="label label--small label--gray">+${extra} more</span>` : ''}
+  ${cards.length === 0 ? `<span class="label label--small label--gray">empty</span>` : ''}
+</div>`;
 }
 
-function footer(name, full) {
-  return `<div style="font-size:${full ? 11 : 9}px;${full ? 'font-weight:600;color:#333;' : 'color:#999;'}padding-top:${full ? 6 : 4}px;border-top:1px solid ${full ? '#ddd' : '#eee'};margin-top:${full ? 6 : 4}px;display:flex;align-items:center;">
-  ${full ? `<span>⬡ ${esc(clip(name, 50))}</span><span style="margin-left:auto;font-size:9px;color:#aaa;">trmnlello - Trello private board</span>` : `${esc(clip(name, 30))} · trmnlello - Trello private board`}
-</div>`;
+function cols(columns, max, maxCards) {
+  return columns.slice(0, max).map(list => column(list, list.cards, maxCards)).join('');
 }
 
 export function full(boardName, columns) {
   const n = columns.length;
   const maxCards = n <= 3 ? 8 : n <= 4 ? 6 : n <= 5 ? 4 : 3;
-  return `<div class="view view--full" style="font-family:'Inter',sans-serif;padding:8px;box-sizing:border-box;height:480px;display:flex;flex-direction:column;"><div style="display:flex;gap:6px;flex:1;overflow:hidden;">${cols(columns, 6, maxCards, n > 4)}</div>${footer(boardName, true)}</div>`;
+  return `<div class="view view--full">
+  <div class="layout layout--col layout--stretch gap">
+    <div class="columns">${cols(columns, 6, maxCards)}</div>
+  </div>
+  <div class="title_bar">
+    <span class="title">Trmnlello</span>
+    <span class="instance">${esc(clip(boardName, 50))}</span>
+  </div>
+</div>`;
 }
 
 export function halfVertical(boardName, columns) {
-  return `<div class="view view--half_vertical" style="font-family:'Inter',sans-serif;padding:6px;box-sizing:border-box;height:480px;display:flex;flex-direction:column;"><div style="display:flex;gap:4px;flex:1;overflow:hidden;">${cols(columns, 3, 4, true)}</div>${footer(boardName, false)}</div>`;
+  return `<div class="view view--half_vertical">
+  <div class="layout layout--col layout--stretch gap">
+    <div class="columns">${cols(columns, 3, 4)}</div>
+  </div>
+  <div class="title_bar">
+    <span class="title">Trmnlello</span>
+    <span class="instance">${esc(clip(boardName, 30))}</span>
+  </div>
+</div>`;
 }
 
 export function halfHorizontal(boardName, columns) {
-  return `<div class="view view--half_horizontal" style="font-family:'Inter',sans-serif;padding:6px;box-sizing:border-box;height:240px;display:flex;flex-direction:column;"><div style="display:flex;gap:4px;flex:1;overflow:hidden;">${cols(columns, 6, 2, true)}</div>${footer(boardName, false)}</div>`;
+  return `<div class="view view--half_horizontal">
+  <div class="layout layout--col layout--stretch gap">
+    <div class="columns">${cols(columns, 6, 2)}</div>
+  </div>
+  <div class="title_bar">
+    <span class="title">Trmnlello</span>
+    <span class="instance">${esc(clip(boardName, 30))}</span>
+  </div>
+</div>`;
 }
 
 export function quadrant(boardName, columns) {
-  return `<div class="view view--quadrant" style="font-family:'Inter',sans-serif;padding:5px;box-sizing:border-box;height:240px;display:flex;flex-direction:column;"><div style="display:flex;gap:4px;flex:1;overflow:hidden;">${cols(columns, 2, 3, true)}</div>${footer(boardName, false)}</div>`;
+  return `<div class="view view--quadrant">
+  <div class="layout layout--col layout--stretch gap">
+    <div class="columns">${cols(columns, 2, 3)}</div>
+  </div>
+  <div class="title_bar">
+    <span class="title">Trmnlello</span>
+    <span class="instance">${esc(clip(boardName, 30))}</span>
+  </div>
+</div>`;
 }
 
 export function setup() {
-  return `<div class="view view--full" style="font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;height:480px;flex-direction:column;gap:12px;"><div style="font-size:24px;">⬡</div><div style="font-size:16px;font-weight:600;">Trmnlello - Trello private board</div><div style="font-size:12px;color:#666;">Select a Trello board to complete setup</div></div>`;
+  return `<div class="view view--full">
+  <div class="layout layout--col layout--stretch" style="align-items:center;justify-content:center;gap:12px;">
+    <span class="title" style="font-size:24px;">⬡</span>
+    <span class="title">Trmnlello</span>
+    <span class="label label--base label--gray">Select a Trello board to complete setup</span>
+  </div>
+</div>`;
 }
 
 export function error(msg) {
-  return `<div class="view view--full" style="font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;height:480px;flex-direction:column;gap:8px;"><div style="font-size:14px;font-weight:600;color:#b84040;">Trmnlello - Trello private board Error</div><div style="font-size:11px;color:#666;max-width:400px;text-align:center;">${esc(msg)}</div></div>`;
+  return `<div class="view view--full">
+  <div class="layout layout--col layout--stretch" style="align-items:center;justify-content:center;gap:8px;">
+    <span class="title label--red">Trmnlello Error</span>
+    <span class="label label--base label--gray" style="max-width:400px;text-align:center;">${esc(msg)}</span>
+  </div>
+</div>`;
 }
 
 export function allLayouts(boardName, columns) {
