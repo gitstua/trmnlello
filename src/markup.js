@@ -44,7 +44,7 @@ function column(list, cards, maxCards) {
   const extra = cards.length - shown.length;
 
   return `<div class="column" data-overflow="true" data-overflow-counter="true">
-  <span class="label label--medium lg:label--base group-header${done ? ' label--gray' : ''}">${esc(clip(list.name, 20))}${cards.length ? ` (${cards.length})` : ''}</span>
+  <span class="title title--small lg:title--base group-header${done ? ' label--gray' : ''}">${esc(clip(list.name, 20))}${cards.length ? ` (${cards.length})` : ''}</span>
   ${shown.map(c => card(c)).join('')}
   ${extra > 0 ? `<span class="label label--small label--gray">+${extra} more</span>` : ''}
   ${cards.length === 0 ? `<span class="label label--small label--gray">empty</span>` : ''}
@@ -63,7 +63,7 @@ export function full(boardName, columns) {
     <div class="columns">${cols(columns, 6, maxCards)}</div>
   </div>
   <div class="title_bar">
-    <span class="title">Trmnlello</span>
+    <span class="title">Trmnlello - Trello private boards</span>
     <span class="instance">${esc(clip(boardName, 50))}</span>
   </div>
 </div>`;
@@ -75,7 +75,7 @@ export function halfVertical(boardName, columns) {
     <div class="columns">${cols(columns, 3, 4)}</div>
   </div>
   <div class="title_bar">
-    <span class="title">Trmnlello</span>
+    <span class="title">Trmnlello - Trello private boards</span>
     <span class="instance">${esc(clip(boardName, 30))}</span>
   </div>
 </div>`;
@@ -87,7 +87,7 @@ export function halfHorizontal(boardName, columns) {
     <div class="columns">${cols(columns, 6, 2)}</div>
   </div>
   <div class="title_bar">
-    <span class="title">Trmnlello</span>
+    <span class="title">Trmnlello - Trello private boards</span>
     <span class="instance">${esc(clip(boardName, 30))}</span>
   </div>
 </div>`;
@@ -99,7 +99,7 @@ export function quadrant(boardName, columns) {
     <div class="columns">${cols(columns, 2, 3)}</div>
   </div>
   <div class="title_bar">
-    <span class="title">Trmnlello</span>
+    <span class="title">Trmnlello - Trello private boards</span>
     <span class="instance">${esc(clip(boardName, 30))}</span>
   </div>
 </div>`;
@@ -109,7 +109,7 @@ export function setup() {
   return `<div class="view view--full">
   <div class="layout layout--col layout--stretch" style="align-items:center;justify-content:center;gap:12px;">
     <span class="title" style="font-size:24px;">⬡</span>
-    <span class="title">Trmnlello</span>
+    <span class="title">Trmnlello - Trello private boards</span>
     <span class="label label--base label--gray">Select a Trello board to complete setup</span>
   </div>
 </div>`;
