@@ -22,7 +22,7 @@ function card(c, timezone) {
   return `<div class="item" style="border-bottom:1px solid #e0e0e0;">
   <div class="content">
     <span class="title title--small lg:title--base" data-clamp="2"${done ? ' style="text-decoration:line-through;opacity:0.5;"' : ''}>${esc(c.name)}</span>
-    ${dueStr ? `<span class="label label--small${overdue ? ' label--filled' : ' label--gray'}">${dueStr}</span>` : ''}
+    ${dueStr ? `<span class="label label--small${overdue ? ' label--error' : ' label--gray'}">${dueStr}</span>` : ''}
   </div>
 </div>`;
 }
@@ -33,7 +33,7 @@ function column(list, cards, maxCards, timezone) {
   const extra = cards.length - shown.length;
 
   return `<div class="column" data-overflow="true" data-overflow-counter="true">
-  <span class="title title--small lg:title--base group-header${done ? ' label--gray' : ''}" style="text-transform:uppercase;">${esc(clip(list.name, 20))}${cards.length ? ` (${cards.length})` : ''}</span>
+  <span class="title title--small lg:title--base group-header${done ? ' text--success' : ''}" style="text-transform:uppercase;">${esc(clip(list.name, 20))}${cards.length ? ` (${cards.length})` : ''}</span>
   ${shown.map(c => card(c, timezone)).join('')}
   ${extra > 0 ? `<span class="label label--small label--gray">+${extra} more</span>` : ''}
   ${cards.length === 0 ? `<span class="label label--small label--gray">empty</span>` : ''}
