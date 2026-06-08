@@ -338,10 +338,20 @@ async function handleMarkup(req, env) {
   );
   log(env, 'markup request headers', JSON.stringify(headers));
 
+  const cloned = req.clone();
   const formData = await req.formData().catch(() => null);
-  const userUuid = formData?.get('user_uuid');
-  const trmnlMeta = (() => { try { return JSON.parse(formData?.get('trmnl') ?? '{}'); } catch { return {}; } })();
-  log(env, 'markup request body', JSON.stringify({ user_uuid: userUuid, trmnl: trmnlMeta }));
+  const allFields = {};
+  if (formData) {
+    for (const [k, v] of formData.entries()) {
+      allFields[k] = k === 'trmnl' ? (() => { try { return JSON.parse(v); } catch { return v; } })() : v;
+    }
+    log(env, 'markup request body', JSON.stringify(allFields));
+  } else {
+    const raw = await cloned.text().catch(() => '');
+    log(env, 'markup request body (raw)', raw);
+  }
+  const userUuid = allFields.user_uuid;
+  const trmnlMeta = allFields.trmnl ?? {};
 
   const user = await kvGet(env.KV, userKey(bearer));
   if (!user) return json({ error: 'Unknown token' }, 401);
