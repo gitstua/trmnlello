@@ -18,7 +18,7 @@ TRMNL is a low-power e-ink dashboard for calendars, to-dos, and plugins like thi
 To switch boards later, use the **Configure** button on the plugin settings page.
 
 ## Display
-
+![alt text](preview.png)
 The board is shown as a kanban — one column per list, cards stacked within each. Due dates are shown in red if overdue (gray on black-and-white devices). Completed cards (due date ticked, or all checklist items checked) are shown with a strikethrough.
 
 Due dates are displayed in your local timezone, taken from your TRMNL device settings.
