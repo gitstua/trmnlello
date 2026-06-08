@@ -55,6 +55,23 @@ function log(env, ...args) {
   if (env.DEBUG) console.log('[trmnlello]', ...args);
 }
 
+// Parse Ruby-style bracket-notation form fields into a nested object.
+// e.g. trmnl[user][time_zone_iana]=X → { trmnl: { user: { time_zone_iana: 'X' } } }
+function parseBracketForm(formData) {
+  const result = {};
+  for (const [key, value] of formData.entries()) {
+    const parts = [];
+    key.replace(/([^\[]+)|\[([^\]]*)\]/g, (_, a, b) => parts.push(a ?? b));
+    let node = result;
+    for (let i = 0; i < parts.length - 1; i++) {
+      if (!node[parts[i]] || typeof node[parts[i]] !== 'object') node[parts[i]] = {};
+      node = node[parts[i]];
+    }
+    node[parts[parts.length - 1]] = value;
+  }
+  return result;
+}
+
 // Only allow redirects back to TRMNL — guards against open-redirect via a
 // stored callback_url that didn't originate from a genuine install.
 function safeTrmnlRedirect(candidate, fallback = 'https://trmnl.com') {
@@ -242,6 +259,7 @@ async function handleManageGet(req, env) {
   const url = new URL(req.url);
   const uuid = url.searchParams.get('uuid') ?? url.searchParams.get('plugin_setting_uuid');
   const jwt = url.searchParams.get('jwt');
+  log(env, 'manage GET params', JSON.stringify(Object.fromEntries(url.searchParams)));
   if (!uuid) return new Response('Missing uuid', { status: 400 });
 
   try {
@@ -340,18 +358,17 @@ async function handleMarkup(req, env) {
 
   const cloned = req.clone();
   const formData = await req.formData().catch(() => null);
-  const allFields = {};
+  let trmnlMeta = {};
+  let userUuid;
   if (formData) {
-    for (const [k, v] of formData.entries()) {
-      allFields[k] = k === 'trmnl' ? (() => { try { return JSON.parse(v); } catch { return v; } })() : v;
-    }
-    log(env, 'markup request body', JSON.stringify(allFields));
+    const parsed = parseBracketForm(formData);
+    userUuid = parsed.user_uuid;
+    trmnlMeta = parsed.trmnl ?? {};
+    log(env, 'markup request body', JSON.stringify(parsed));
   } else {
     const raw = await cloned.text().catch(() => '');
     log(env, 'markup request body (raw)', raw);
   }
-  const userUuid = allFields.user_uuid;
-  const trmnlMeta = allFields.trmnl ?? {};
 
   const user = await kvGet(env.KV, userKey(bearer));
   if (!user) return json({ error: 'Unknown token' }, 401);
