@@ -25,6 +25,11 @@ Due dates are displayed in your local timezone, taken from your TRMNL device set
 
 The plugin supports all four TRMNL layout sizes (full screen, half vertical, half horizontal, and quadrant).
 
+## Limitations
+
+- Only tested with up to 4 columns — boards with more lists may display poorly
+- Boards with a large number of cards per column will be truncated; only the first several cards are shown
+
 ## Trello permissions
 
 When you connect Trello, you will be asked to grant **read-only** access. This allows the plugin to:
