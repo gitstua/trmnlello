@@ -1,6 +1,6 @@
 # trmnlello - Trello for private boards
 
-A [TRMNL](https://trmnl.com) plugin that displays your Trello kanban board on your e-ink device. Shows all lists and cards including completed ones, with colour-coded labels and due dates.
+A [TRMNL](https://trmnl.com) plugin that displays your Trello kanban board on your e-ink device. Shows all lists and cards including completed ones, with due dates.
 
 ## Don't have a TRMNL yet?
 
@@ -12,14 +12,16 @@ TRMNL is a low-power e-ink dashboard for calendars, to-dos, and plugins like thi
 
 1. In your TRMNL dashboard, find **Trello for private boards** in the plugin marketplace and click **Install**
 2. You'll be redirected to Trello to authorise read-only access to your boards
-3. Pick which board you want to display
+3. Pick which board to display and confirm your timezone (auto-detected from your browser)
 4. Your device will show the board on its next refresh
 
 To switch boards later, use the **Configure** button on the plugin settings page.
 
 ## Display
 
-The board is shown as a kanban — one column per list, cards stacked within each. Lists with names like *Done*, *Complete*, or *Shipped* get a green header. Labels appear as coloured dots, and due dates are shown in red if overdue.
+The board is shown as a kanban — one column per list, cards stacked within each. Lists with names like *Done*, *Complete*, *Shipped*, *Finished*, *Closed*, or *Deployed* get a gray header. Due dates are shown highlighted if overdue. Completed cards (due date ticked, or all checklist items checked) are shown with a strikethrough.
+
+Due dates are displayed in your local timezone, which is collected during setup and can be updated from the **Configure** page at any time.
 
 The plugin supports all four TRMNL layout sizes (full screen, half vertical, half horizontal, and quadrant).
 

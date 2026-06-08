@@ -11,9 +11,9 @@ function esc(s) {
     .replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function card(c) {
+function card(c, timezone) {
   const dueStr = c.due
-    ? new Date(c.due).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    ? new Date(c.due).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: timezone ?? 'UTC' })
     : '';
   const overdue = c.due && !c.dueComplete && new Date(c.due) < new Date();
   const b = c.badges ?? {};
@@ -27,29 +27,29 @@ function card(c) {
 </div>`;
 }
 
-function column(list, cards, maxCards) {
+function column(list, cards, maxCards, timezone) {
   const done = DONE_RE.test(list.name);
   const shown = cards.slice(0, maxCards);
   const extra = cards.length - shown.length;
 
   return `<div class="column" data-overflow="true" data-overflow-counter="true">
   <span class="title title--small lg:title--base group-header${done ? ' label--gray' : ''}" style="text-transform:uppercase;">${esc(clip(list.name, 20))}${cards.length ? ` (${cards.length})` : ''}</span>
-  ${shown.map(c => card(c)).join('')}
+  ${shown.map(c => card(c, timezone)).join('')}
   ${extra > 0 ? `<span class="label label--small label--gray">+${extra} more</span>` : ''}
   ${cards.length === 0 ? `<span class="label label--small label--gray">empty</span>` : ''}
 </div>`;
 }
 
-function cols(columns, max, maxCards) {
-  return columns.slice(0, max).map(list => column(list, list.cards, maxCards)).join('');
+function cols(columns, max, maxCards, timezone) {
+  return columns.slice(0, max).map(list => column(list, list.cards, maxCards, timezone)).join('');
 }
 
-export function full(boardName, columns) {
+export function full(boardName, columns, timezone) {
   const n = columns.length;
   const maxCards = n <= 3 ? 8 : n <= 4 ? 6 : n <= 5 ? 4 : 3;
   return `<div class="view view--full">
   <div class="layout layout--col layout--stretch gap">
-    <div class="columns">${cols(columns, 6, maxCards)}</div>
+    <div class="columns">${cols(columns, 6, maxCards, timezone)}</div>
   </div>
   <div class="title_bar">
     <span class="title">Trmnlello - Trello private boards</span>
@@ -58,10 +58,10 @@ export function full(boardName, columns) {
 </div>`;
 }
 
-export function halfVertical(boardName, columns) {
+export function halfVertical(boardName, columns, timezone) {
   return `<div class="view view--half_vertical">
   <div class="layout layout--col layout--stretch gap">
-    <div class="columns">${cols(columns, 3, 4)}</div>
+    <div class="columns">${cols(columns, 3, 4, timezone)}</div>
   </div>
   <div class="title_bar">
     <span class="title">Trmnlello - Trello private boards</span>
@@ -70,10 +70,10 @@ export function halfVertical(boardName, columns) {
 </div>`;
 }
 
-export function halfHorizontal(boardName, columns) {
+export function halfHorizontal(boardName, columns, timezone) {
   return `<div class="view view--half_horizontal">
   <div class="layout layout--col layout--stretch gap">
-    <div class="columns">${cols(columns, 6, 2)}</div>
+    <div class="columns">${cols(columns, 6, 2, timezone)}</div>
   </div>
   <div class="title_bar">
     <span class="title">Trmnlello - Trello private boards</span>
@@ -82,10 +82,10 @@ export function halfHorizontal(boardName, columns) {
 </div>`;
 }
 
-export function quadrant(boardName, columns) {
+export function quadrant(boardName, columns, timezone) {
   return `<div class="view view--quadrant">
   <div class="layout layout--col layout--stretch gap">
-    <div class="columns">${cols(columns, 2, 3)}</div>
+    <div class="columns">${cols(columns, 2, 3, timezone)}</div>
   </div>
   <div class="title_bar">
     <span class="title">Trmnlello - Trello private boards</span>
@@ -113,11 +113,11 @@ export function error(msg) {
 </div>`;
 }
 
-export function allLayouts(boardName, columns) {
+export function allLayouts(boardName, columns, timezone) {
   return {
-    markup: full(boardName, columns),
-    markup_half_vertical: halfVertical(boardName, columns),
-    markup_half_horizontal: halfHorizontal(boardName, columns),
-    markup_quadrant: quadrant(boardName, columns),
+    markup: full(boardName, columns, timezone),
+    markup_half_vertical: halfVertical(boardName, columns, timezone),
+    markup_half_horizontal: halfHorizontal(boardName, columns, timezone),
+    markup_quadrant: quadrant(boardName, columns, timezone),
   };
 }

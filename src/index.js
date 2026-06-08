@@ -170,6 +170,7 @@ async function handleBoardSelectGet(req, env) {
     .card{background:#fff;border-radius:12px;padding:32px;max-width:420px;width:100%;box-shadow:0 4px 20px rgba(0,0,0,.08)}
     h1{margin:0 0 8px;font-size:22px}
     p{color:#666;margin:0 0 24px;font-size:14px}
+    label{display:block;font-size:13px;color:#555;margin-bottom:4px}
     select{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:15px;margin-bottom:16px}
     button{width:100%;padding:12px;background:#0052cc;color:#fff;border:none;border-radius:8px;font-size:15px;cursor:pointer;font-weight:600}
     button:hover{background:#0041a3}
@@ -185,9 +186,26 @@ async function handleBoardSelectGet(req, env) {
     <p>Choose which Trello board to display on your TRMNL device.</p>
     <form method="POST" action="/board-select">
       <input type="hidden" name="t" value="${esc(accessToken)}">
-      <select name="board_id" required>${options}</select>
+      <label for="board_id">Board</label>
+      <select name="board_id" id="board_id" required>${options}</select>
+      <label for="tz">Timezone</label>
+      <select name="timezone" id="tz"></select>
       <button type="submit">Connect Board</button>
     </form>
+    <script>
+      (function(){
+        var sel=document.getElementById('tz');
+        var detected=Intl.DateTimeFormat().resolvedOptions().timeZone;
+        var zones=[];
+        try{zones=Intl.supportedValuesOf('timeZone');}catch(e){zones=[detected];}
+        zones.forEach(function(z){
+          var o=document.createElement('option');
+          o.value=z;o.text=z.replace(/_/g,' ');
+          if(z===detected)o.selected=true;
+          sel.appendChild(o);
+        });
+      })();
+    </script>
     <div class="disclaimer">
       <strong>Use at your own risk.</strong> Your Trello OAuth token (read-only) will be stored in Cloudflare KV.
       No warranty is provided. You can revoke access at any time via your
@@ -204,6 +222,7 @@ async function handleBoardSelectPost(req, env) {
   const body = await req.formData();
   const accessToken = body.get('t');
   const boardId = body.get('board_id');
+  const timezone = body.get('timezone') || null;
 
   const user = accessToken && await kvGet(env.KV, userKey(accessToken));
   if (!user?.trello_token) return new Response('Invalid session', { status: 400 });
@@ -216,6 +235,7 @@ async function handleBoardSelectPost(req, env) {
     ...user,
     board_id: board.id,
     board_name: board.name,
+    ...(timezone && { timezone }),
   });
 
   return Response.redirect(safeTrmnlRedirect(user.callback_url), 302);
@@ -258,6 +278,7 @@ async function handleManageGet(req, env) {
     .card{background:#fff;border-radius:12px;padding:32px;max-width:420px;width:100%;box-shadow:0 4px 20px rgba(0,0,0,.08)}
     h1{margin:0 0 8px;font-size:22px}
     p{color:#666;margin:0 0 24px;font-size:14px}
+    label{display:block;font-size:13px;color:#555;margin-bottom:4px}
     select{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:15px;margin-bottom:16px}
     button{width:100%;padding:12px;background:#0052cc;color:#fff;border:none;border-radius:8px;font-size:15px;cursor:pointer;font-weight:600}
     button:hover{background:#0041a3}
@@ -272,9 +293,28 @@ async function handleManageGet(req, env) {
     <form method="POST" action="/manage">
       <input type="hidden" name="uuid" value="${esc(uuid)}">
       <input type="hidden" name="jwt" value="${esc(jwt ?? '')}">
-      <select name="board_id" required>${options}</select>
+      <label for="board_id">Board</label>
+      <select name="board_id" id="board_id" required>${options}</select>
+      <label for="tz">Timezone</label>
+      <select name="timezone" id="tz" data-stored="${esc(user.timezone ?? '')}"></select>
       <button type="submit">Save</button>
     </form>
+    <script>
+      (function(){
+        var sel=document.getElementById('tz');
+        var stored=sel.dataset.stored;
+        var detected=Intl.DateTimeFormat().resolvedOptions().timeZone;
+        var preferred=stored||detected;
+        var zones=[];
+        try{zones=Intl.supportedValuesOf('timeZone');}catch(e){zones=[preferred];}
+        zones.forEach(function(z){
+          var o=document.createElement('option');
+          o.value=z;o.text=z.replace(/_/g,' ');
+          if(z===preferred)o.selected=true;
+          sel.appendChild(o);
+        });
+      })();
+    </script>
   </div>
 </body>
 </html>`);
@@ -300,7 +340,8 @@ async function handleManagePost(req, env) {
   const board = boards.find(b => b.id === boardId);
   if (!board) return new Response('Board not found', { status: 400 });
 
-  const updated = { ...user, board_id: board.id, board_name: board.name };
+  const timezone = body.get('timezone') || null;
+  const updated = { ...user, board_id: board.id, board_name: board.name, ...(timezone && { timezone }) };
   await kvPut(env.KV, userKey(user.access_token), updated);
   await kvPut(env.KV, `uuid:${uuid}`, updated);
   if (user.user_uuid)         await kvPut(env.KV, `uuid:${user.user_uuid}`, updated);
@@ -339,7 +380,7 @@ async function handleMarkup(req, env) {
     await kvTouch(env.KV, userKey(bearer), touched);
     if (user.user_uuid)         await kvTouch(env.KV, `uuid:${user.user_uuid}`, touched);
     if (user.plugin_setting_id) await kvTouch(env.KV, `uuid:${user.plugin_setting_id}`, touched);
-    return json(markup.allLayouts(user.board_name, lists));
+    return json(markup.allLayouts(user.board_name, lists, user.timezone ?? 'UTC'));
   } catch (err) {
     console.error('Markup fetch failed:', err.message);
     const errHtml = markup.error('Could not fetch board data. Please try again later.');
