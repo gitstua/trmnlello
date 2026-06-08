@@ -306,9 +306,7 @@ async function handleManagePost(req, env) {
   if (user.user_uuid)         await kvPut(env.KV, `uuid:${user.user_uuid}`, updated);
   if (user.plugin_setting_id) await kvPut(env.KV, `uuid:${user.plugin_setting_id}`, updated);
 
-  const redirectTo = user.plugin_setting_id
-    ? `https://trmnl.com/plugin_settings/${encodeURIComponent(user.plugin_setting_id)}/edit?force_refresh=true`
-    : 'https://trmnl.com';
+  const redirectTo = `https://trmnl.com/plugin_settings/${encodeURIComponent(uuid)}/edit?force_refresh=true`;
 
   return Response.redirect(safeTrmnlRedirect(redirectTo), 302);
 }
@@ -389,6 +387,7 @@ function handlePreview(req) {
   const now = new Date();
   const yesterday = new Date(now.getTime() - 86400000).toISOString();
   const tomorrow = new Date(now.getTime() + 86400000).toISOString();
+  const nextWeek = new Date(now.getTime() + 7 * 86400000).toISOString();
 
   const sampleLists = [
     {
@@ -406,6 +405,7 @@ function handlePreview(req) {
         { id: 'c5', name: 'Implement authentication flow', labels: [{ color: 'red' }], due: yesterday, dueComplete: false, badges: {} },
         { id: 'c6', name: 'Build dashboard UI', labels: [{ color: 'yellow' }, { color: 'orange' }], due: null, dueComplete: false, badges: {} },
         { id: 'c7', name: 'Database migrations', labels: [], due: null, dueComplete: false, badges: { checkItems: 3, checkItemsChecked: 3 } },
+        { id: 'c12', name: 'Deploy to staging', labels: [], due: nextWeek, dueComplete: false, badges: {} },
       ],
     },
     {
