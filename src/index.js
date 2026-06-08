@@ -51,6 +51,10 @@ function esc(s) {
     .replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+function log(env, ...args) {
+  if (env.DEBUG) console.log('[trmnlello]', ...args);
+}
+
 // Only allow redirects back to TRMNL — guards against open-redirect via a
 // stored callback_url that didn't originate from a genuine install.
 function safeTrmnlRedirect(candidate, fallback = 'https://trmnl.com') {
@@ -76,6 +80,8 @@ async function handleInstall(req, env) {
     return new Response('Missing code or installation_callback_url', { status: 400 });
   }
 
+  log(env, 'install started', { callbackUrl });
+
   // Exchange TRMNL code for access token
   const tokenRes = await fetch('https://trmnl.com/oauth/token', {
     method: 'POST',
@@ -93,6 +99,7 @@ async function handleInstall(req, env) {
   }
 
   const { access_token } = await tokenRes.json();
+  log(env, 'TRMNL token exchange ok');
 
   // Persist partial user record
   await kvPut(env.KV, userKey(access_token), { access_token, callback_url: callbackUrl });
@@ -100,6 +107,7 @@ async function handleInstall(req, env) {
   // Start Trello OAuth — store request token keyed to our TRMNL token
   const trelloCallback = `${baseUrl(req, env)}/trello/callback`;
   const { oauth_token, oauth_token_secret } = await trello.getRequestToken(trelloCallback, env);
+  log(env, 'Trello request token obtained, redirecting to Trello auth');
 
   await kvPut(env.KV, reqTokenKey(oauth_token), {
     oauth_token_secret,
@@ -127,6 +135,7 @@ async function handleTrelloCallback(req, env) {
 
   const { oauth_token: trelloToken, oauth_token_secret: trelloSecret } =
     await trello.getAccessToken(oauthToken, stored.oauth_token_secret, oauthVerifier, env);
+  log(env, 'Trello access token obtained');
 
   await env.KV.delete(reqTokenKey(oauthToken));
 
@@ -138,6 +147,7 @@ async function handleTrelloCallback(req, env) {
     trello_secret: trelloSecret,
   });
 
+  log(env, 'redirecting to board select');
   const boardSelectUrl = `${baseUrl(req, env)}/board-select?t=${encodeURIComponent(stored.access_token)}`;
   return Response.redirect(boardSelectUrl, 302);
 }
@@ -154,6 +164,7 @@ async function handleBoardSelectGet(req, env) {
   }
 
   const boards = await trello.getBoards(user.trello_token, user.trello_secret, env);
+  log(env, 'board select: fetched boards', { count: boards.length });
   const options = boards.map(b =>
     `<option value="${esc(b.id)}">${esc(b.name)}</option>`
   ).join('');
@@ -186,26 +197,9 @@ async function handleBoardSelectGet(req, env) {
     <p>Choose which Trello board to display on your TRMNL device.</p>
     <form method="POST" action="/board-select">
       <input type="hidden" name="t" value="${esc(accessToken)}">
-      <label for="board_id">Board</label>
       <select name="board_id" id="board_id" required>${options}</select>
-      <label for="tz">Timezone</label>
-      <select name="timezone" id="tz"></select>
       <button type="submit">Connect Board</button>
     </form>
-    <script>
-      (function(){
-        var sel=document.getElementById('tz');
-        var detected=Intl.DateTimeFormat().resolvedOptions().timeZone;
-        var zones=[];
-        try{zones=Intl.supportedValuesOf('timeZone');}catch(e){zones=[detected];}
-        zones.forEach(function(z){
-          var o=document.createElement('option');
-          o.value=z;o.text=z.replace(/_/g,' ');
-          if(z===detected)o.selected=true;
-          sel.appendChild(o);
-        });
-      })();
-    </script>
     <div class="disclaimer">
       <strong>Use at your own risk.</strong> Your Trello OAuth token (read-only) will be stored in Cloudflare KV.
       No warranty is provided. You can revoke access at any time via your
@@ -222,7 +216,6 @@ async function handleBoardSelectPost(req, env) {
   const body = await req.formData();
   const accessToken = body.get('t');
   const boardId = body.get('board_id');
-  const timezone = body.get('timezone') || null;
 
   const user = accessToken && await kvGet(env.KV, userKey(accessToken));
   if (!user?.trello_token) return new Response('Invalid session', { status: 400 });
@@ -235,9 +228,9 @@ async function handleBoardSelectPost(req, env) {
     ...user,
     board_id: board.id,
     board_name: board.name,
-    ...(timezone && { timezone }),
   });
 
+  log(env, 'board selected', { board_name: board.name });
   return Response.redirect(safeTrmnlRedirect(user.callback_url), 302);
 }
 
@@ -262,6 +255,7 @@ async function handleManageGet(req, env) {
   if (!user?.trello_token) return new Response('User not found', { status: 404 });
 
   const boards = await trello.getBoards(user.trello_token, user.trello_secret, env);
+  log(env, 'manage: fetched boards', { uuid, count: boards.length, current_board: user.board_name });
   const options = boards.map(b =>
     `<option value="${esc(b.id)}"${b.id === user.board_id ? ' selected' : ''}>${esc(b.name)}</option>`
   ).join('');
@@ -293,28 +287,9 @@ async function handleManageGet(req, env) {
     <form method="POST" action="/manage">
       <input type="hidden" name="uuid" value="${esc(uuid)}">
       <input type="hidden" name="jwt" value="${esc(jwt ?? '')}">
-      <label for="board_id">Board</label>
       <select name="board_id" id="board_id" required>${options}</select>
-      <label for="tz">Timezone</label>
-      <select name="timezone" id="tz" data-stored="${esc(user.timezone ?? '')}"></select>
       <button type="submit">Save</button>
     </form>
-    <script>
-      (function(){
-        var sel=document.getElementById('tz');
-        var stored=sel.dataset.stored;
-        var detected=Intl.DateTimeFormat().resolvedOptions().timeZone;
-        var preferred=stored||detected;
-        var zones=[];
-        try{zones=Intl.supportedValuesOf('timeZone');}catch(e){zones=[preferred];}
-        zones.forEach(function(z){
-          var o=document.createElement('option');
-          o.value=z;o.text=z.replace(/_/g,' ');
-          if(z===preferred)o.selected=true;
-          sel.appendChild(o);
-        });
-      })();
-    </script>
   </div>
 </body>
 </html>`);
@@ -340,14 +315,14 @@ async function handleManagePost(req, env) {
   const board = boards.find(b => b.id === boardId);
   if (!board) return new Response('Board not found', { status: 400 });
 
-  const timezone = body.get('timezone') || null;
-  const updated = { ...user, board_id: board.id, board_name: board.name, ...(timezone && { timezone }) };
+  const updated = { ...user, board_id: board.id, board_name: board.name };
+  log(env, 'manage: board updated', { uuid, board_name: board.name });
   await kvPut(env.KV, userKey(user.access_token), updated);
   await kvPut(env.KV, `uuid:${uuid}`, updated);
   if (user.user_uuid)         await kvPut(env.KV, `uuid:${user.user_uuid}`, updated);
   if (user.plugin_setting_id) await kvPut(env.KV, `uuid:${user.plugin_setting_id}`, updated);
 
-  const redirectTo = `https://trmnl.com/plugin_settings/${encodeURIComponent(uuid)}/edit?force_refresh=true`;
+  const redirectTo = `https://trmnl.com/plugin_settings/${encodeURIComponent(uuid)}/force_refresh`;
 
   return Response.redirect(safeTrmnlRedirect(redirectTo), 302);
 }
@@ -358,8 +333,20 @@ async function handleMarkup(req, env) {
   const bearer = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '').trim();
   if (!bearer) return json({ error: 'Missing Authorization' }, 401);
 
+  const headers = Object.fromEntries(
+    [...req.headers.entries()].filter(([k]) => k.toLowerCase() !== 'authorization')
+  );
+  log(env, 'markup request headers', JSON.stringify(headers));
+
+  const formData = await req.formData().catch(() => null);
+  const userUuid = formData?.get('user_uuid');
+  const trmnlMeta = (() => { try { return JSON.parse(formData?.get('trmnl') ?? '{}'); } catch { return {}; } })();
+  log(env, 'markup request body', JSON.stringify({ user_uuid: userUuid, trmnl: trmnlMeta }));
+
   const user = await kvGet(env.KV, userKey(bearer));
   if (!user) return json({ error: 'Unknown token' }, 401);
+
+  log(env, 'markup requested', { user_uuid: user.user_uuid, board_name: user.board_name, timezone: user.timezone });
 
   const placeholder = markup.setup();
   if (!user.board_id || !user.trello_token) {
@@ -373,6 +360,7 @@ async function handleMarkup(req, env) {
 
   try {
     const lists = await trello.getBoardData(user.board_id, user.trello_token, user.trello_secret, env);
+    log(env, 'markup: board data fetched', { lists: lists.length });
     // Extend TTL on every use — tokens inactive for 90 days expire automatically.
     // Refresh every index so the manage lookup keys don't expire out from under
     // an otherwise-active user.
@@ -380,7 +368,9 @@ async function handleMarkup(req, env) {
     await kvTouch(env.KV, userKey(bearer), touched);
     if (user.user_uuid)         await kvTouch(env.KV, `uuid:${user.user_uuid}`, touched);
     if (user.plugin_setting_id) await kvTouch(env.KV, `uuid:${user.plugin_setting_id}`, touched);
-    return json(markup.allLayouts(user.board_name, lists, user.timezone ?? 'UTC'));
+    const timezone = trmnlMeta.user?.time_zone_iana ?? user.timezone ?? 'UTC';
+    log(env, 'markup: using timezone', { timezone, source: trmnlMeta.user?.time_zone_iana ? 'trmnl' : 'stored' });
+    return json(markup.allLayouts(user.board_name, lists, timezone));
   } catch (err) {
     console.error('Markup fetch failed:', err.message);
     const errHtml = markup.error('Could not fetch board data. Please try again later.');
@@ -398,6 +388,7 @@ async function handleMarkup(req, env) {
 async function handleInstallSuccess(req, env) {
   const bearer = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '').trim();
   const body = await req.json().catch(() => ({}));
+  log(env, 'installation success webhook', JSON.stringify(body));
   if (bearer) {
     const user = await kvGet(env.KV, userKey(bearer)) ?? {};
     const updated = {
@@ -415,7 +406,11 @@ async function handleInstallSuccess(req, env) {
 
 async function handleUninstall(req, env) {
   const bearer = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '').trim();
-  if (bearer) await env.KV.delete(userKey(bearer));
+  if (bearer) {
+    const user = await kvGet(env.KV, userKey(bearer));
+    log(env, 'uninstall', { user_uuid: user?.user_uuid });
+    await env.KV.delete(userKey(bearer));
+  }
   return json({ ok: true });
 }
 

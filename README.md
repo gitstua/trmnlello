@@ -12,7 +12,7 @@ TRMNL is a low-power e-ink dashboard for calendars, to-dos, and plugins like thi
 
 1. In your TRMNL dashboard, find **Trello for private boards** in the plugin marketplace and click **Install**
 2. You'll be redirected to Trello to authorise read-only access to your boards
-3. Pick which board to display and confirm your timezone (auto-detected from your browser)
+3. Pick which board to display
 4. Your device will show the board on its next refresh
 
 To switch boards later, use the **Configure** button on the plugin settings page.
@@ -21,7 +21,7 @@ To switch boards later, use the **Configure** button on the plugin settings page
 
 The board is shown as a kanban — one column per list, cards stacked within each. Lists with names like *Done*, *Complete*, *Shipped*, *Finished*, *Closed*, or *Deployed* get a green header (gray on black-and-white devices). Due dates are shown in red if overdue (gray on black-and-white devices). Completed cards (due date ticked, or all checklist items checked) are shown with a strikethrough.
 
-Due dates are displayed in your local timezone, which is collected during setup and can be updated from the **Configure** page at any time.
+Due dates are displayed in your local timezone, taken from your TRMNL device settings.
 
 The plugin supports all four TRMNL layout sizes (full screen, half vertical, half horizontal, and quadrant).
 
