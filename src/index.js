@@ -271,7 +271,29 @@ async function handleManageGet(req, env) {
   }
 
   const user = await kvGet(env.KV, `uuid:${uuid}`);
-  if (!user?.trello_token) return new Response('User not found', { status: 404 });
+  if (!user?.trello_token) return html(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Trello for private boards - Session not found</title>
+  <style>
+    *{box-sizing:border-box}
+    body{font-family:system-ui,sans-serif;background:#f5f5f5;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
+    .card{background:#fff;border-radius:12px;padding:32px;max-width:420px;width:100%;box-shadow:0 4px 20px rgba(0,0,0,.08)}
+    h1{margin:0 0 8px;font-size:22px}
+    p{color:#666;margin:0;font-size:14px;line-height:1.5}
+    .logo{font-size:28px;margin-bottom:12px}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">⬡</div>
+    <h1>Trmnlello - Trello for private boards</h1>
+    <p>Session not found. To fix this, uninstall the plugin from TRMNL and add it again.</p>
+  </div>
+</body>
+</html>`, 404);
 
   const boards = await trello.getBoards(user.trello_token, user.trello_secret, env);
   log(env, 'manage: fetched boards', { uuid, count: boards.length, current_board: user.board_name });
@@ -328,7 +350,7 @@ async function handleManagePost(req, env) {
   }
 
   const user = await kvGet(env.KV, `uuid:${uuid}`);
-  if (!user?.trello_token) return new Response('User not found', { status: 404 });
+  if (!user?.trello_token) return new Response('Session not found. Uninstall and reinstall the Trello for private boards plugin to fix this.', { status: 404 });
 
   const boards = await trello.getBoards(user.trello_token, user.trello_secret, env);
   const board = boards.find(b => b.id === boardId);
@@ -375,7 +397,10 @@ async function handleMarkup(req, env) {
   }
 
   const user = await kvGet(env.KV, userKey(bearer));
-  if (!user) return json({ error: 'Unknown token' }, 401);
+  if (!user) {
+    const msg = markup.error('Session not found — please reinstall Trmnlello from your TRMNL app.');
+    return json({ markup: msg, markup_half_vertical: msg, markup_half_horizontal: msg, markup_quadrant: msg });
+  }
 
   log(env, 'markup requested', { user_uuid: user.user_uuid, board_name: user.board_name, timezone: user.timezone });
 

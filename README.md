@@ -38,6 +38,8 @@ The token is scoped to `read` access and does not expire — this avoids you nee
 
 ## Privacy & data
 
+This plugin runs on [Cloudflare Workers](https://workers.cloudflare.com/) — a serverless platform with data centres worldwide. Your data is stored in Cloudflare KV, a key-value store hosted by Cloudflare.
+
 - Read-only Trello access is requested — the plugin cannot create, edit, or delete anything in Trello
 - Your Trello OAuth token is stored in Cloudflare KV (hosted by the plugin operator) and is never sent to TRMNL — TRMNL only calls the `/markup` endpoint to fetch display content
 - Tokens are automatically deleted after 90 days of inactivity, or immediately when you uninstall the plugin
