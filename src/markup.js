@@ -53,7 +53,7 @@ export function full(boardName, columns, timezone) {
     <div class="columns">${cols(columns, 6, maxCards, timezone)}</div>
   </div>
   <div class="title_bar">
-    <span class="title">Trmnlello - Trello private boards</span>
+    <span class="title">Trello private boards</span>
     <span class="instance">${esc(clip(boardName, 50))}</span>
   </div>
 </div>`;
@@ -65,7 +65,7 @@ export function halfVertical(boardName, columns, timezone) {
     <div class="columns">${cols(columns, 3, 4, timezone)}</div>
   </div>
   <div class="title_bar">
-    <span class="title">Trmnlello - Trello private boards</span>
+    <span class="title">Trello private boards</span>
     <span class="instance">${esc(clip(boardName, 30))}</span>
   </div>
 </div>`;
@@ -77,7 +77,7 @@ export function halfHorizontal(boardName, columns, timezone) {
     <div class="columns">${cols(columns, 6, 2, timezone)}</div>
   </div>
   <div class="title_bar">
-    <span class="title">Trmnlello - Trello private boards</span>
+    <span class="title">Trello private boards</span>
     <span class="instance">${esc(clip(boardName, 30))}</span>
   </div>
 </div>`;
@@ -89,7 +89,7 @@ export function quadrant(boardName, columns, timezone) {
     <div class="columns">${cols(columns, 2, 3, timezone)}</div>
   </div>
   <div class="title_bar">
-    <span class="title">Trmnlello - Trello private boards</span>
+    <span class="title">Trello private boards</span>
     <span class="instance">${esc(clip(boardName, 30))}</span>
   </div>
 </div>`;
@@ -99,7 +99,7 @@ export function setup() {
   return `<div class="view view--full">
   <div class="layout layout--col layout--stretch" style="align-items:center;justify-content:center;gap:12px;">
     <span class="title" style="font-size:24px;">⬡</span>
-    <span class="title">Trmnlello - Trello private boards</span>
+    <span class="title">Trello private boards</span>
     <span class="label label--base label--gray">Select a Trello board to complete setup</span>
   </div>
 </div>`;
