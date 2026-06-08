@@ -260,6 +260,7 @@ async function handleManageGet(req, env) {
   const uuid = url.searchParams.get('uuid') ?? url.searchParams.get('plugin_setting_uuid');
   const jwt = url.searchParams.get('jwt');
   log(env, 'manage GET params', JSON.stringify(Object.fromEntries(url.searchParams)));
+  log(env, 'manage GET referer', req.headers.get('Referer') ?? 'none');
   if (!uuid) return new Response('Missing uuid', { status: 400 });
 
   try {
@@ -341,8 +342,8 @@ async function handleManagePost(req, env) {
   if (user.plugin_setting_id) await kvPut(env.KV, `uuid:${user.plugin_setting_id}`, updated);
 
   const redirectTo = user.plugin_setting_id
-    ? `https://trmnl.com/plugin_settings/${user.plugin_setting_id}/force_refresh`
-    : `https://trmnl.com/plugin_settings/${encodeURIComponent(uuid)}/force_refresh`;
+    ? `https://trmnl.com/plugin_settings/${user.plugin_setting_id}/edit?force_refresh=true`
+    : `https://trmnl.com/plugin_settings/${encodeURIComponent(uuid)}/edit?force_refresh=true`;
   log(env, 'manage: redirecting', { redirectTo });
 
   return Response.redirect(safeTrmnlRedirect(redirectTo), 302);
