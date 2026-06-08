@@ -19,7 +19,7 @@ To switch boards later, use the **Configure** button on the plugin settings page
 
 ## Display
 
-The board is shown as a kanban — one column per list, cards stacked within each. Lists with names like *Done*, *Complete*, *Shipped*, *Finished*, *Closed*, or *Deployed* get a green header (gray on black-and-white devices). Due dates are shown in red if overdue (gray on black-and-white devices). Completed cards (due date ticked, or all checklist items checked) are shown with a strikethrough.
+The board is shown as a kanban — one column per list, cards stacked within each. Due dates are shown in red if overdue (gray on black-and-white devices). Completed cards (due date ticked, or all checklist items checked) are shown with a strikethrough.
 
 Due dates are displayed in your local timezone, taken from your TRMNL device settings.
 
