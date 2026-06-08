@@ -340,7 +340,10 @@ async function handleManagePost(req, env) {
   if (user.user_uuid)         await kvPut(env.KV, `uuid:${user.user_uuid}`, updated);
   if (user.plugin_setting_id) await kvPut(env.KV, `uuid:${user.plugin_setting_id}`, updated);
 
-  const redirectTo = `https://trmnl.com/plugin_settings/${encodeURIComponent(uuid)}/force_refresh`;
+  const redirectTo = user.plugin_setting_id
+    ? `https://trmnl.com/plugin_settings/${user.plugin_setting_id}/force_refresh`
+    : `https://trmnl.com/plugin_settings/${encodeURIComponent(uuid)}/force_refresh`;
+  log(env, 'manage: redirecting', { redirectTo });
 
   return Response.redirect(safeTrmnlRedirect(redirectTo), 302);
 }
@@ -395,8 +398,8 @@ async function handleMarkup(req, env) {
     await kvTouch(env.KV, userKey(bearer), touched);
     if (user.user_uuid)         await kvTouch(env.KV, `uuid:${user.user_uuid}`, touched);
     if (user.plugin_setting_id) await kvTouch(env.KV, `uuid:${user.plugin_setting_id}`, touched);
-    const timezone = trmnlMeta.user?.time_zone_iana ?? user.timezone ?? 'UTC';
-    log(env, 'markup: using timezone', { timezone, source: trmnlMeta.user?.time_zone_iana ? 'trmnl' : 'stored' });
+    const timezone = trmnlMeta.user?.time_zone_iana ?? 'UTC';
+    log(env, 'markup: using timezone', { timezone, source: trmnlMeta.user?.time_zone_iana ? 'trmnl' : 'UTC fallback' });
     return json(markup.allLayouts(user.board_name, lists, timezone));
   } catch (err) {
     console.error('Markup fetch failed:', err.message);
@@ -421,12 +424,12 @@ async function handleInstallSuccess(req, env) {
     const updated = {
       ...user,
       user_uuid: body.user?.uuid,
-      plugin_setting_id: body.plugin_setting_id,
+      plugin_setting_id: body.user?.plugin_setting_id,
     };
     await kvPut(env.KV, userKey(bearer), updated);
-    // index by both user uuid and plugin_setting_id so /manage can find the user
-    if (body.user?.uuid)         await kvPut(env.KV, `uuid:${body.user.uuid}`, updated);
-    if (body.plugin_setting_id)  await kvPut(env.KV, `uuid:${body.plugin_setting_id}`, updated);
+    // index by user uuid and plugin_setting_id so /manage can find the user
+    if (body.user?.uuid)                  await kvPut(env.KV, `uuid:${body.user.uuid}`, updated);
+    if (body.user?.plugin_setting_id)     await kvPut(env.KV, `uuid:${body.user.plugin_setting_id}`, updated);
   }
   return json({ ok: true });
 }
