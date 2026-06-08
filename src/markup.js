@@ -1,11 +1,5 @@
 const DONE_RE = /\b(done|complete|completed|finished|shipped|closed|deployed)\b/i;
 
-const LABEL_COLORS = {
-  green: '#4a9b6f', yellow: '#b8860b', orange: '#cc6b28', red: '#b84040',
-  purple: '#7b68ae', blue: '#4a7fb5', sky: '#4a9bb5', lime: '#6aaa48',
-  pink: '#c45b8a', black: '#555',
-};
-
 function clip(s, n) {
   s = String(s ?? '');
   return s.length > n ? s.slice(0, n - 1) + '…' : s;
@@ -18,10 +12,6 @@ function esc(s) {
 }
 
 function card(c) {
-  const dots = (c.labels ?? []).slice(0, 3).map(l =>
-    `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${LABEL_COLORS[l.color] ?? '#888'};margin-right:2px;"></span>`
-  ).join('');
-
   const dueStr = c.due
     ? new Date(c.due).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     : '';
@@ -29,11 +19,10 @@ function card(c) {
   const b = c.badges ?? {};
   const done = c.dueComplete || (b.checkItems > 0 && b.checkItems === b.checkItemsChecked);
 
-  return `<div class="item">
+  return `<div class="item" style="border-bottom:1px solid #e0e0e0;">
   <div class="content">
-    ${dots ? `<div style="margin-bottom:2px;">${dots}</div>` : ''}
     <span class="title title--small lg:title--base" data-clamp="2"${done ? ' style="text-decoration:line-through;opacity:0.5;"' : ''}>${esc(c.name)}</span>
-    ${dueStr ? `<span class="label label--small${overdue ? ' label--red' : ' label--gray'}">${dueStr}</span>` : ''}
+    ${dueStr ? `<span class="label label--small${overdue ? ' label--filled' : ' label--gray'}">${dueStr}</span>` : ''}
   </div>
 </div>`;
 }
@@ -44,7 +33,7 @@ function column(list, cards, maxCards) {
   const extra = cards.length - shown.length;
 
   return `<div class="column" data-overflow="true" data-overflow-counter="true">
-  <span class="title title--small lg:title--base group-header${done ? ' label--gray' : ''}">${esc(clip(list.name, 20))}${cards.length ? ` (${cards.length})` : ''}</span>
+  <span class="title title--small lg:title--base group-header${done ? ' label--gray' : ''}" style="text-transform:uppercase;">${esc(clip(list.name, 20))}${cards.length ? ` (${cards.length})` : ''}</span>
   ${shown.map(c => card(c)).join('')}
   ${extra > 0 ? `<span class="label label--small label--gray">+${extra} more</span>` : ''}
   ${cards.length === 0 ? `<span class="label label--small label--gray">empty</span>` : ''}

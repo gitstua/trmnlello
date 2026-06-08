@@ -10,7 +10,7 @@ TRMNL is a low-power e-ink dashboard for calendars, to-dos, and plugins like thi
 
 ## Installing
 
-1. In your TRMNL dashboard, find **trmnlello** in the plugin marketplace and click **Install**
+1. In your TRMNL dashboard, find **Trello for private boards** in the plugin marketplace and click **Install**
 2. You'll be redirected to Trello to authorise read-only access to your boards
 3. Pick which board you want to display
 4. Your device will show the board on its next refresh
@@ -50,7 +50,7 @@ This plugin is provided **as-is, without any warranty**. Use at your own risk.
 
 While reasonable precautions are taken (read-only Trello access, encrypted-at-rest storage, automatic token expiry), no security guarantee is made. In the event of a breach of the underlying infrastructure, Trello OAuth tokens stored in Cloudflare KV could be exposed. These tokens grant read-only access to whichever Trello board you selected — they cannot be used to modify or delete your Trello data.
 
-You can revoke access at any time by visiting [https://trello.com/your-account/power-ups](https://trello.com) and removing the Trmnlello authorisation, or by uninstalling the plugin from TRMNL.
+You can revoke access at any time by visiting [https://trello.com/your-account/power-ups](https://trello.com/your-account/power-ups) and removing the Trmnlello authorisation, or by uninstalling the plugin from TRMNL.
 
 The author accepts no liability for any loss or damage arising from use of this plugin.
 

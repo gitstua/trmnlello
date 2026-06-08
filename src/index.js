@@ -307,7 +307,7 @@ async function handleManagePost(req, env) {
   if (user.plugin_setting_id) await kvPut(env.KV, `uuid:${user.plugin_setting_id}`, updated);
 
   const redirectTo = user.plugin_setting_id
-    ? `https://trmnl.com/plugin_settings/${encodeURIComponent(user.plugin_setting_id)}/edit`
+    ? `https://trmnl.com/plugin_settings/${encodeURIComponent(user.plugin_setting_id)}/edit?force_refresh=true`
     : 'https://trmnl.com';
 
   return Response.redirect(safeTrmnlRedirect(redirectTo), 302);
@@ -380,6 +380,161 @@ async function handleUninstall(req, env) {
   return json({ ok: true });
 }
 
+// ─── Preview: anonymous UI preview with sample data ──────────────────────────
+
+function handlePreview(req) {
+  const url = new URL(req.url);
+  const layout = url.searchParams.get('layout') ?? 'full';
+
+  const now = new Date();
+  const yesterday = new Date(now.getTime() - 86400000).toISOString();
+  const tomorrow = new Date(now.getTime() + 86400000).toISOString();
+
+  const sampleLists = [
+    {
+      id: '1', name: 'To Do',
+      cards: [
+        { id: 'c1', name: 'Set up project structure', labels: [{ color: 'blue' }, { color: 'green' }], due: null, dueComplete: false, badges: {} },
+        { id: 'c2', name: 'Design the API endpoints', labels: [{ color: 'purple' }], due: tomorrow, dueComplete: false, badges: {} },
+        { id: 'c3', name: 'Review requirements document — this one has a very long title to test clipping', labels: [], due: yesterday, dueComplete: false, badges: {} },
+        { id: 'c4', name: 'Write unit tests', labels: [{ color: 'sky' }], due: null, dueComplete: false, badges: {} },
+      ],
+    },
+    {
+      id: '2', name: 'In Progress',
+      cards: [
+        { id: 'c5', name: 'Implement authentication flow', labels: [{ color: 'red' }], due: yesterday, dueComplete: false, badges: {} },
+        { id: 'c6', name: 'Build dashboard UI', labels: [{ color: 'yellow' }, { color: 'orange' }], due: null, dueComplete: false, badges: {} },
+        { id: 'c7', name: 'Database migrations', labels: [], due: null, dueComplete: false, badges: { checkItems: 3, checkItemsChecked: 3 } },
+      ],
+    },
+    {
+      id: '3', name: 'Done',
+      cards: [
+        { id: 'c8', name: 'Project kickoff meeting', labels: [], due: null, dueComplete: true, badges: {} },
+        { id: 'c9', name: 'Write technical spec', labels: [{ color: 'green' }], due: null, dueComplete: true, badges: {} },
+      ],
+    },
+    // {
+    //   id: '4', name: 'Backlog',
+    //   cards: [
+    //     { id: 'c10', name: 'Performance optimisation', labels: [{ color: 'lime' }], due: null, dueComplete: false, badges: {} },
+    //     { id: 'c11', name: 'Accessibility audit', labels: [{ color: 'pink' }], due: null, dueComplete: false, badges: {} },
+    //   ],
+    // },
+  ];
+
+  const boardName = 'Sample Board (Preview)';
+
+  const layouts = {
+    full: markup.full(boardName, sampleLists),
+    half_vertical: markup.halfVertical(boardName, sampleLists),
+    half_horizontal: markup.halfHorizontal(boardName, sampleLists),
+    quadrant: markup.quadrant(boardName, sampleLists),
+  };
+
+  const active = layouts[layout] ? layout : 'full';
+  const content = layouts[active];
+
+  // Native screen dimensions per layout for OG/BWRY (800×480 base)
+  const ogDims = {
+    full:             { w: 800, h: 480 },
+    half_vertical:    { w: 400, h: 480 },
+    half_horizontal:  { w: 800, h: 240 },
+    quadrant:         { w: 400, h: 240 },
+  };
+  // TRMNL X (1872×1404 base) — proportional halves
+  const xDims = {
+    full:             { w: 1872, h: 1404 },
+    half_vertical:    { w:  936, h: 1404 },
+    half_horizontal:  { w: 1872, h:  702 },
+    quadrant:         { w:  936, h:  702 },
+  };
+
+  const { w: ogW, h: ogH } = ogDims[active];
+  const { w: xW,  h: xH  } = xDims[active];
+
+  // Scale OG/BWRY so widest layout (800px) renders at 400px display width
+  const ogScale = 400 / 800; // 0.5 always — keeps side-by-side row stable
+  // Scale X so widest layout (1872px) renders at 800px display width
+  const xScale  = 800 / 1872;
+
+  const navLink = (id, label) =>
+    `<a href="?layout=${id}" style="color:${active === id ? '#fff' : '#adf'};text-decoration:${active === id ? 'underline' : 'none'};font-size:12px;">${label}</a>`;
+
+  const deviceLabel = (name, spec) =>
+    `<div style="font-family:system-ui,sans-serif;margin-bottom:4px;">
+      <span style="font-weight:700;font-size:13px;">${name}</span>
+      <span style="font-size:11px;color:#888;margin-left:8px;">${spec}</span>
+    </div>`;
+
+  // Render the markup inside a genuine framework `.screen` so the TRMNL design
+  // system itself lays out the columns — we set only the device dimensions it reads
+  // (--screen-w/--screen-h) and force --pixel-ratio:1 so it renders at logical size.
+  // A wrapping transform then shrinks the whole screen down to a thumbnail.
+  const screen = (deviceClass, w, h, scale, filter) => {
+    const dw = Math.round(w * scale);
+    const dh = Math.round(h * scale);
+    return `<div class="frame" style="width:${dw}px;height:${dh}px;">
+      <div class="scaler" style="transform:scale(${scale})${filter ? `;filter:${filter}` : ''};">
+        <div class="screen ${deviceClass}" style="--screen-w:${w}px;--screen-h:${h}px;--pixel-ratio:1;">${content}</div>
+      </div>
+    </div>`;
+  };
+
+  const page = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Trmnlello Preview — ${esc(active)}</title>
+  <link rel="stylesheet" href="https://trmnl.com/css/latest/plugins.css">
+  <style>
+    /* Preview chrome only — the framework (.screen) owns all content layout */
+    body{margin:0;background:#f0f0f0;font-family:system-ui,sans-serif;}
+    .bar{background:#1a1a1a;color:#ccc;padding:8px 16px;display:flex;gap:16px;align-items:center;}
+    .devices{padding:24px 32px;display:flex;flex-direction:column;gap:28px;}
+    .device-row{display:flex;flex-direction:row;gap:32px;flex-wrap:wrap;}
+    .frame{overflow:hidden;border:2px solid #999;background:#fff;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.12);}
+    .scaler{transform-origin:top left;}
+  </style>
+</head>
+<body class="trmnl">
+  <div class="bar">
+    <span style="color:#fff;font-weight:bold;">Trmnlello Preview</span>
+    ${navLink('full', 'Full')}
+    ${navLink('half_vertical', 'Half Vertical')}
+    ${navLink('half_horizontal', 'Half Horizontal')}
+    ${navLink('quadrant', 'Quadrant')}
+  </div>
+  <div class="devices">
+    <div class="device-row">
+      <div>
+        ${deviceLabel('TRMNL OG', `7.5" · ${ogW}×${ogH} · 4-level grayscale`)}
+        ${screen('screen--ogv2', ogW, ogH, ogScale, 'grayscale(1)')}
+      </div>
+      <div>
+        ${deviceLabel('TRMNL BWRY', `7.5" · ${ogW}×${ogH} · Black / White / Red / Yellow`)}
+        ${screen('screen--ogv2 screen--color', ogW, ogH, ogScale, '')}
+      </div>
+    </div>
+    <div>
+      ${deviceLabel('TRMNL X', `10.3" · ${xW}×${xH} · 16-level grayscale`)}
+      ${screen('screen--ogv2', xW, xH, xScale, 'grayscale(1)')}
+    </div>
+  </div>
+  <script src="https://trmnl.com/js/latest/plugins.js"></script>
+</body>
+</html>`;
+
+  return new Response(page, {
+    headers: {
+      'Content-Type': 'text/html;charset=UTF-8',
+      'Referrer-Policy': 'no-referrer',
+    },
+  });
+}
+
 // ─── Router ───────────────────────────────────────────────────────────────────
 
 export default {
@@ -395,6 +550,7 @@ export default {
       if (method === 'POST' && pathname === '/markup')            return handleMarkup(request, env);
       if (method === 'GET'  && pathname === '/manage')                        return handleManageGet(request, env);
       if (method === 'POST' && pathname === '/manage')                        return handleManagePost(request, env);
+      if (method === 'GET'  && pathname === '/preview')           return handlePreview(request);
       if (method === 'POST' && pathname === '/webhooks/installation_success') return handleInstallSuccess(request, env);
       if (method === 'POST' && pathname === '/webhooks/uninstall') return handleUninstall(request, env);
       return new Response('Not found', { status: 404 });
