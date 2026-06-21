@@ -8,7 +8,8 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "kv:create": "wrangler kv namespace create TRMNLELLO",
-    "stats": "node scripts/stats.js"
+    "stats": "node scripts/stats.js",
+    "analytics": "node scripts/analytics.js"
   },
   "devDependencies": {
     "wrangler": "^4.103.0"

@@ -431,6 +431,14 @@ async function handleMarkup(req, env) {
       if (user.user_uuid)         await kvTouch(env.KV, `uuid:${user.user_uuid}`, touched);
       if (user.plugin_setting_id) await kvTouch(env.KV, `uuid:${user.plugin_setting_id}`, touched);
     }
+    // Record one render data point (not a KV write — see scripts/analytics.js).
+    // blob1 = event tag, blob2 = non-identifying timezone.
+    // double1 = count, double2 = columns (lists), double3 = total cards.
+    const cardCount = lists.reduce((n, l) => n + l.cards.length, 0);
+    env.ANALYTICS?.writeDataPoint({
+      blobs: ['render', timezone],
+      doubles: [1, lists.length, cardCount],
+    });
     return json(markup.allLayouts(user.board_name, lists, timezone));
   } catch (err) {
     console.error('Markup fetch failed:', err.message);
@@ -634,9 +642,10 @@ function handlePreview(req) {
 }
 
 // ─── Daily aggregate stats (privacy-preserving) ──────────────────────────────
-// Computes counts and a non-identifying timezone distribution — no per-user
-// records, no board names, no tokens. Written once per day by the cron trigger
-// to a `stats:YYYY-MM-DD` key so historical usage can be charted over time.
+// Computes install-base / activity counts — no per-user records, no board names,
+// no tokens. Written once per day by the cron trigger as a 'daily_stats' data
+// point in Analytics Engine (see the scheduled handler). Timezone distribution
+// is captured separately per render event, so it isn't recomputed here.
 
 async function listAllKeys(kv, prefix) {
   const keys = [];
@@ -656,7 +665,6 @@ async function computeDailyStats(env) {
 
   const stats = {
     date: new Date().toISOString().slice(0, 10),
-    generated_at: new Date().toISOString(),
     total_users: 0,
     boards_configured: 0,
     setup_incomplete: 0,
@@ -664,7 +672,6 @@ async function computeDailyStats(env) {
     active_7d: 0,
     active_30d: 0,
     distinct_boards: 0,
-    by_timezone: {},
   };
 
   const boardIds = new Set();
@@ -686,10 +693,6 @@ async function computeDailyStats(env) {
       if (age < 7 * DAY)  stats.active_7d++;
       if (age < 30 * DAY) stats.active_30d++;
     }
-
-    if (user.timezone) {
-      stats.by_timezone[user.timezone] = (stats.by_timezone[user.timezone] ?? 0) + 1;
-    }
   }
 
   stats.distinct_boards = boardIds.size;
@@ -702,8 +705,22 @@ export default {
   async scheduled(event, env, ctx) {
     ctx.waitUntil((async () => {
       const stats = await computeDailyStats(env);
-      // History keys persist (no TTL) — one small record per day.
-      await env.KV.put(`stats:${stats.date}`, JSON.stringify(stats));
+      // All analytics live in Analytics Engine. The daily snapshot captures the
+      // install-base / activity metrics that can't be derived from render events
+      // alone (e.g. dormant users who aren't currently polling).
+      // blob1 = 'daily_stats'. doubles in fixed order:
+      //   [total_users, active_today, active_7d, active_30d, boards_configured, distinct_boards]
+      env.ANALYTICS?.writeDataPoint({
+        blobs: ['daily_stats'],
+        doubles: [
+          stats.total_users,
+          stats.active_today,
+          stats.active_7d,
+          stats.active_30d,
+          stats.boards_configured,
+          stats.distinct_boards,
+        ],
+      });
       console.log(JSON.stringify({
         event: 'daily_stats',
         date: stats.date,

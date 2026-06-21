@@ -11,6 +11,12 @@ id = "d6b4182549cb4d46801906fb9bd97721"
 [triggers]
 crons = ["10 0 * * *"]
 
+# Analytics Engine — one data point per board render. Not a KV write, so no
+# impact on KV quota. Queried via the SQL API (see scripts/renders.js).
+[[analytics_engine_datasets]]
+binding = "ANALYTICS"
+dataset = "trmnlello_renders"
+
 [vars]
 # Override in .dev.vars for local dev, or set via `wrangler deploy --var`
 # BASE_URL is set automatically to the worker URL in production.
