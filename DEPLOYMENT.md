@@ -74,4 +74,20 @@ The worker runs at `http://localhost:8787`. TRMNL cannot reach localhost, so the
 
 ## Data storage
 
-User records are stored in Cloudflare KV with a rolling 90-day TTL, reset on every device refresh. Uninstalling deletes the record immediately via the uninstall webhook.
+User records are stored in Cloudflare KV with a rolling 90-day TTL, reset once per day on device refresh. Uninstalling deletes the record immediately via the uninstall webhook.
+
+## Scaling & when to upgrade
+
+The plugin runs comfortably on the Cloudflare **free tier**. The binding constraint is **KV writes** (1,000/day on free). Each active user costs roughly 3 writes/day — the TTL touch only fires once per day, not on every poll — so:
+
+| Resource | Free tier limit | Approx. user ceiling |
+|----------|-----------------|----------------------|
+| KV writes | 1,000/day | **~300 active users** (this is the limit you hit first) |
+| KV reads | 100,000/day | ~1,000 users |
+| Worker requests | 100,000/day | ~1,000 users |
+
+**When to upgrade:** as active users approach **~250**, move to the **Workers Paid** plan ($5/month). It raises the write ceiling to ~330,000/day (≈100,000 users before any usage-based charges). Watch your numbers with `npm run stats`.
+
+**Important:** the Paid plan does **not** include an uptime SLA — Cloudflare only offers SLAs on Business/Enterprise plans. Upgrading is purely about raising the free-tier limits, not about availability guarantees. The service remains best-effort regardless of plan.
+
+If KV writes are exhausted on the free tier, writes fail silently — tokens stop getting their TTL refreshed and would eventually expire, effectively logging users out. That's the symptom to watch for if you ever exceed the free limits unexpectedly.

@@ -417,18 +417,20 @@ async function handleMarkup(req, env) {
   try {
     const lists = await trello.getBoardData(user.board_id, user.trello_token, user.trello_secret, env);
     log(env, 'markup: board data fetched', { lists: lists.length });
+    const timezone = trmnlMeta.user?.time_zone_iana ?? 'UTC';
+    log(env, 'markup: using timezone', { timezone, source: trmnlMeta.user?.time_zone_iana ? 'trmnl' : 'UTC fallback' });
     // Extend TTL once per day — avoids burning KV write quota on every poll.
     // TRMNL refreshes every 15 min (96×/day); we only need to prove activity
-    // once daily to keep the 90-day rolling TTL alive.
+    // once daily to keep the 90-day rolling TTL alive. We also persist the
+    // timezone here (cost-free, inside the same write) so the daily aggregate
+    // snapshot can report a non-identifying timezone distribution.
     const today = new Date().toISOString().slice(0, 10);
     if (user.last_used?.slice(0, 10) !== today) {
-      const touched = { ...user, last_used: new Date().toISOString() };
+      const touched = { ...user, last_used: new Date().toISOString(), timezone };
       await kvTouch(env.KV, userKey(bearer), touched);
       if (user.user_uuid)         await kvTouch(env.KV, `uuid:${user.user_uuid}`, touched);
       if (user.plugin_setting_id) await kvTouch(env.KV, `uuid:${user.plugin_setting_id}`, touched);
     }
-    const timezone = trmnlMeta.user?.time_zone_iana ?? 'UTC';
-    log(env, 'markup: using timezone', { timezone, source: trmnlMeta.user?.time_zone_iana ? 'trmnl' : 'UTC fallback' });
     return json(markup.allLayouts(user.board_name, lists, timezone));
   } catch (err) {
     console.error('Markup fetch failed:', err.message);
@@ -631,9 +633,86 @@ function handlePreview(req) {
   });
 }
 
+// ─── Daily aggregate stats (privacy-preserving) ──────────────────────────────
+// Computes counts and a non-identifying timezone distribution — no per-user
+// records, no board names, no tokens. Written once per day by the cron trigger
+// to a `stats:YYYY-MM-DD` key so historical usage can be charted over time.
+
+async function listAllKeys(kv, prefix) {
+  const keys = [];
+  let cursor;
+  do {
+    const res = await kv.list({ prefix, cursor });
+    keys.push(...res.keys.map(k => k.name));
+    cursor = res.list_complete ? undefined : res.cursor;
+  } while (cursor);
+  return keys;
+}
+
+async function computeDailyStats(env) {
+  const userKeys = await listAllKeys(env.KV, 'user:');
+  const now = Date.now();
+  const DAY = 86400000;
+
+  const stats = {
+    date: new Date().toISOString().slice(0, 10),
+    generated_at: new Date().toISOString(),
+    total_users: 0,
+    boards_configured: 0,
+    setup_incomplete: 0,
+    active_today: 0,
+    active_7d: 0,
+    active_30d: 0,
+    distinct_boards: 0,
+    by_timezone: {},
+  };
+
+  const boardIds = new Set();
+  for (const key of userKeys) {
+    const user = await kvGet(env.KV, key);
+    if (!user) continue;
+
+    stats.total_users++;
+    if (user.board_id) {
+      stats.boards_configured++;
+      boardIds.add(user.board_id); // counted as a distinct total only, ids not stored
+    } else {
+      stats.setup_incomplete++;
+    }
+
+    if (user.last_used) {
+      const age = now - new Date(user.last_used).getTime();
+      if (age < DAY)      stats.active_today++;
+      if (age < 7 * DAY)  stats.active_7d++;
+      if (age < 30 * DAY) stats.active_30d++;
+    }
+
+    if (user.timezone) {
+      stats.by_timezone[user.timezone] = (stats.by_timezone[user.timezone] ?? 0) + 1;
+    }
+  }
+
+  stats.distinct_boards = boardIds.size;
+  return stats;
+}
+
 // ─── Router ───────────────────────────────────────────────────────────────────
 
 export default {
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil((async () => {
+      const stats = await computeDailyStats(env);
+      // History keys persist (no TTL) — one small record per day.
+      await env.KV.put(`stats:${stats.date}`, JSON.stringify(stats));
+      console.log(JSON.stringify({
+        event: 'daily_stats',
+        date: stats.date,
+        total_users: stats.total_users,
+        active_today: stats.active_today,
+      }));
+    })());
+  },
+
   async fetch(request, env) {
     const { pathname } = new URL(request.url);
     const method = request.method;

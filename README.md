@@ -55,6 +55,29 @@ This plugin runs on [Cloudflare Workers](https://workers.cloudflare.com/) — a 
 
 Thanks to [@ucffool](https://github.com/ucffool) who independently created a public Trello board viewer for TRMNL.
 
+## Availability & SLA
+
+This plugin is run on a **best-effort basis with no uptime guarantee**. It is hosted on Cloudflare's **free tier**, which carries **no contractual SLA** — Cloudflare only offers SLAs on its Business and Enterprise plans.
+
+For reference, even on Cloudflare's paid Enterprise tier the published commitments are:
+
+| Component | Published SLA (Enterprise only) |
+|-----------|---------------------------------|
+| Cloudflare Workers (the app runtime) | 99.99% monthly uptime |
+| Cloudflare KV (data storage) | No separately published SLA |
+| Trello API (data source) | Governed by Atlassian's own terms |
+| TRMNL (device + refresh) | Governed by TRMNL's own terms |
+
+Because the service depends on several components in series, real-world availability is the **product** of all of them, not the best single figure. For example, four dependencies each at 99.9% give a compound availability of roughly `0.999⁴ ≈ 99.6%` — and on the free tier none of these are actually guaranteed at all. In practice the plugin is reliable, but you should treat it as best-effort and not depend on it for anything critical.
+
+You can check the live status and incident history of the underlying platforms here:
+
+- **Cloudflare:** [cloudflarestatus.com](https://www.cloudflarestatus.com) — Workers & KV status (filter to the "Workers" and "Workers KV" components)
+- **Trello:** [trello.status.atlassian.com](https://trello.status.atlassian.com)
+- **TRMNL:** [trmnl.statuspage.io](https://trmnl.statuspage.io)
+
+Sources: [Workers SLA](https://www.cloudflare.com/workers-service-level-agreement/), [Workers pricing](https://developers.cloudflare.com/workers/platform/pricing/), [KV pricing](https://developers.cloudflare.com/kv/platform/pricing/).
+
 ## Disclaimer
 
 This plugin is provided **as-is, without any warranty**. Use at your own risk.

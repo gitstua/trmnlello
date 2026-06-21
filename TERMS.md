@@ -20,10 +20,15 @@ To operate the service, the following data is stored in Cloudflare KV (a cloud k
 - Your Trello OAuth token (read-only scope)
 - The Trello board ID and name you selected
 - A TRMNL access token used to authenticate display requests
+- Your device's timezone, used to render dates correctly
 
 This data is stored only as long as needed. Tokens are deleted immediately when you uninstall the plugin, or automatically after 90 days of inactivity.
 
 No data is sold or shared with third parties. Data is only used to fetch your Trello board and render it on your device.
+
+## 3a. Anonymous usage statistics
+
+Once per day the service records an aggregate, anonymous snapshot of overall usage — for example the total number of active installations and a breakdown of timezones. These statistics contain only counts and distributions. They are **not** linked to you, your account, or your board, and contain no Trello content, tokens, or personal identifiers. They are used solely to understand how the plugin is being used.
 
 ## 4. Security
 

@@ -7,6 +7,10 @@ compatibility_flags = ["nodejs_compat"]
 binding = "KV"
 id = "d6b4182549cb4d46801906fb9bd97721"
 
+# Daily aggregate usage snapshot — runs at 00:10 UTC, writes a stats:YYYY-MM-DD key
+[triggers]
+crons = ["10 0 * * *"]
+
 [vars]
 # Override in .dev.vars for local dev, or set via `wrangler deploy --var`
 # BASE_URL is set automatically to the worker URL in production.
