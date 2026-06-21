@@ -259,8 +259,8 @@ async function handleManageGet(req, env) {
   const url = new URL(req.url);
   const uuid = url.searchParams.get('uuid') ?? url.searchParams.get('plugin_setting_uuid');
   const jwt = url.searchParams.get('jwt');
-  log(env, 'manage GET params', JSON.stringify(Object.fromEntries(url.searchParams)));
-  log(env, 'manage GET referer', req.headers.get('Referer') ?? 'none');
+  // Log uuid presence only — never log the jwt or Referer (both can carry secrets)
+  log(env, 'manage GET', { has_uuid: !!uuid, has_jwt: !!jwt });
   if (!uuid) return new Response('Missing uuid', { status: 400 });
 
   try {
@@ -402,7 +402,7 @@ async function handleMarkup(req, env) {
     return json({ markup: msg, markup_half_vertical: msg, markup_half_horizontal: msg, markup_quadrant: msg });
   }
 
-  log(env, 'markup requested', { user_uuid: user.user_uuid, board_name: user.board_name, timezone: user.timezone });
+  log(env, 'markup requested', { has_board: !!user.board_id, has_trello_token: !!user.trello_token });
 
   const placeholder = markup.setup();
   if (!user.board_id || !user.trello_token) {
@@ -447,7 +447,8 @@ async function handleMarkup(req, env) {
 async function handleInstallSuccess(req, env) {
   const bearer = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '').trim();
   const body = await req.json().catch(() => ({}));
-  log(env, 'installation success webhook', JSON.stringify(body));
+  // Log only non-PII fields — body contains user email/name/uuid
+  log(env, 'installation success webhook', { has_plugin_setting_id: !!body.plugin_setting_id, has_user: !!body.user });
   if (bearer) {
     const user = await kvGet(env.KV, userKey(bearer)) ?? {};
     const updated = {
