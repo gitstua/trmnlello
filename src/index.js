@@ -417,13 +417,16 @@ async function handleMarkup(req, env) {
   try {
     const lists = await trello.getBoardData(user.board_id, user.trello_token, user.trello_secret, env);
     log(env, 'markup: board data fetched', { lists: lists.length });
-    // Extend TTL on every use — tokens inactive for 90 days expire automatically.
-    // Refresh every index so the manage lookup keys don't expire out from under
-    // an otherwise-active user.
-    const touched = { ...user, last_used: new Date().toISOString() };
-    await kvTouch(env.KV, userKey(bearer), touched);
-    if (user.user_uuid)         await kvTouch(env.KV, `uuid:${user.user_uuid}`, touched);
-    if (user.plugin_setting_id) await kvTouch(env.KV, `uuid:${user.plugin_setting_id}`, touched);
+    // Extend TTL once per day — avoids burning KV write quota on every poll.
+    // TRMNL refreshes every 15 min (96×/day); we only need to prove activity
+    // once daily to keep the 90-day rolling TTL alive.
+    const today = new Date().toISOString().slice(0, 10);
+    if (user.last_used?.slice(0, 10) !== today) {
+      const touched = { ...user, last_used: new Date().toISOString() };
+      await kvTouch(env.KV, userKey(bearer), touched);
+      if (user.user_uuid)         await kvTouch(env.KV, `uuid:${user.user_uuid}`, touched);
+      if (user.plugin_setting_id) await kvTouch(env.KV, `uuid:${user.plugin_setting_id}`, touched);
+    }
     const timezone = trmnlMeta.user?.time_zone_iana ?? 'UTC';
     log(env, 'markup: using timezone', { timezone, source: trmnlMeta.user?.time_zone_iana ? 'trmnl' : 'UTC fallback' });
     return json(markup.allLayouts(user.board_name, lists, timezone));
