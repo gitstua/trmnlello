@@ -11,6 +11,6 @@
     "stats": "node scripts/stats.js"
   },
   "devDependencies": {
-    "wrangler": "^4.95.0"
+    "wrangler": "^4.103.0"
   }
 }
