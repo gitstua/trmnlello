@@ -45,9 +45,25 @@ function cols(columns, max, maxCards, timezone) {
   return columns.slice(0, max).map(list => column(list, list.cards, maxCards, timezone)).join('');
 }
 
-export function full(boardName, columns, timezone) {
+// Cards-per-column setting. Stored per user as '' (auto), 'all', or '1'…'50'.
+// Returns null for auto (use the layout default), Infinity for all, or a count.
+export const CARD_LIMIT_MAX = 50;
+export function parseCardLimit(value) {
+  const v = String(value ?? '').trim().toLowerCase();
+  if (v === 'all') return Infinity;
+  const n = parseInt(v, 10);
+  return Number.isInteger(n) && n >= 1 && n <= CARD_LIMIT_MAX ? n : null;
+}
+
+// Normalises form input to the stored form ('' | 'all' | '<n>').
+export function normaliseCardLimit(value) {
+  const n = parseCardLimit(value);
+  return n === null ? '' : n === Infinity ? 'all' : String(n);
+}
+
+export function full(boardName, columns, timezone, cardLimit = null) {
   const n = columns.length;
-  const maxCards = n <= 3 ? 8 : n <= 4 ? 6 : n <= 5 ? 4 : 3;
+  const maxCards = cardLimit ?? (n <= 3 ? 8 : n <= 4 ? 6 : n <= 5 ? 4 : 3);
   return `<div class="view view--full">
   <div class="layout layout--col layout--stretch gap">
     <div class="columns">${cols(columns, 6, maxCards, timezone)}</div>
@@ -59,10 +75,10 @@ export function full(boardName, columns, timezone) {
 </div>`;
 }
 
-export function halfVertical(boardName, columns, timezone) {
+export function halfVertical(boardName, columns, timezone, cardLimit = null) {
   return `<div class="view view--half_vertical">
   <div class="layout layout--col layout--stretch gap">
-    <div class="columns">${cols(columns, 3, 4, timezone)}</div>
+    <div class="columns">${cols(columns, 3, cardLimit ?? 4, timezone)}</div>
   </div>
   <div class="title_bar">
     <span class="title">Trello private boards</span>
@@ -71,10 +87,10 @@ export function halfVertical(boardName, columns, timezone) {
 </div>`;
 }
 
-export function halfHorizontal(boardName, columns, timezone) {
+export function halfHorizontal(boardName, columns, timezone, cardLimit = null) {
   return `<div class="view view--half_horizontal">
   <div class="layout layout--col layout--stretch gap">
-    <div class="columns">${cols(columns, 6, 2, timezone)}</div>
+    <div class="columns">${cols(columns, 6, cardLimit ?? 2, timezone)}</div>
   </div>
   <div class="title_bar">
     <span class="title">Trello private boards</span>
@@ -83,10 +99,10 @@ export function halfHorizontal(boardName, columns, timezone) {
 </div>`;
 }
 
-export function quadrant(boardName, columns, timezone) {
+export function quadrant(boardName, columns, timezone, cardLimit = null) {
   return `<div class="view view--quadrant">
   <div class="layout layout--col layout--stretch gap">
-    <div class="columns">${cols(columns, 2, 3, timezone)}</div>
+    <div class="columns">${cols(columns, 2, cardLimit ?? 3, timezone)}</div>
   </div>
   <div class="title_bar">
     <span class="title">Trello private boards</span>
@@ -114,11 +130,11 @@ export function error(msg) {
 </div>`;
 }
 
-export function allLayouts(boardName, columns, timezone) {
+export function allLayouts(boardName, columns, timezone, cardLimit = null) {
   return {
-    markup: full(boardName, columns, timezone),
-    markup_half_vertical: halfVertical(boardName, columns, timezone),
-    markup_half_horizontal: halfHorizontal(boardName, columns, timezone),
-    markup_quadrant: quadrant(boardName, columns, timezone),
+    markup: full(boardName, columns, timezone, cardLimit),
+    markup_half_vertical: halfVertical(boardName, columns, timezone, cardLimit),
+    markup_half_horizontal: halfHorizontal(boardName, columns, timezone, cardLimit),
+    markup_quadrant: quadrant(boardName, columns, timezone, cardLimit),
   };
 }

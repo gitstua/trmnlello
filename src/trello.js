@@ -111,6 +111,10 @@ export async function getBoards(trelloToken, trelloSecret, env) {
   return trelloGet('/members/me/boards?fields=id,name&filter=open', trelloToken, trelloSecret, env);
 }
 
+export async function getLists(boardId, trelloToken, trelloSecret, env) {
+  return trelloGet(`/boards/${boardId}/lists?fields=id,name`, trelloToken, trelloSecret, env);
+}
+
 export async function getBoardData(boardId, trelloToken, trelloSecret, env) {
   const [lists, allCards] = await Promise.all([
     trelloGet(`/boards/${boardId}/lists?fields=id,name`, trelloToken, trelloSecret, env),
